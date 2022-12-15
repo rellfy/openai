@@ -5,9 +5,9 @@
 // We could create a struct that has all of these things,
 // and every request could be an implemented function
 
-use reqwest::{ Client, header::{ AUTHORIZATION, HeaderMap, HeaderValue } };
+use reqwest::Client;
 use serde::Deserialize;
-use models::ModelObject;
+use models::{ list_models, ModelObject };
 
 mod models;
 
@@ -33,25 +33,6 @@ impl OpenAI<'_> {
     }
 
     pub async fn list_models(&self) -> Result<ListObject<ModelObject>, reqwest::Error> {
-        let mut headers = HeaderMap::new();
-
-        headers.append(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {}", self.key))
-                .expect("HeaderValue should be created from key string"),
-        );
-
-        if self.organization.is_some() {
-            headers.append(
-                "OpenAI-Organization",
-                HeaderValue::from_str(self.organization.expect("organization should be some"))
-                    .expect("HeaderValue should be created from organization string"),
-            );
-        }
-
-        let request = self.client.get("https://api.openai.com/v1/models")
-            .headers(headers);
-
-        request.send().await?.json().await
+        list_models(self).await
     }
 }
