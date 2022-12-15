@@ -9,7 +9,7 @@ use reqwest::Client;
 use serde::Deserialize;
 use models::{ list_models, ModelObject };
 
-mod models;
+pub mod models;
 
 #[derive(Deserialize)]
 pub struct ListObject<T> {
