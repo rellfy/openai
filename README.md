@@ -5,7 +5,7 @@ An unofficial OpenAI API library for Rust.
 > Not yet stable enough to be used in any production applications.
 
 ## Implementation Progress
- - [ ] Models
+ - [x] Models
  - [ ] Completions
  - [ ] Edits
  - [ ] Images

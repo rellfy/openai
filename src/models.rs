@@ -34,3 +34,10 @@ pub(super) async fn list_models(openai: &OpenAI<'_>) -> Result<ListObject<ModelO
 
     request.send().await?.json().await
 }
+
+pub(super) async fn retrieve_model(openai: &OpenAI<'_>, model: &str) -> Result<ModelObject, reqwest::Error> {
+    let request = openai.client.get(format!("https://api.openai.com/v1/models/{model}"))
+            .headers(openai_headers(openai));
+
+    request.send().await?.json().await
+}

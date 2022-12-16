@@ -10,7 +10,7 @@ use reqwest::{
     header::{ AUTHORIZATION, HeaderMap, HeaderValue },
 };
 use serde::Deserialize;
-use models::{ list_models, ModelObject };
+use models::{ list_models, ModelObject, retrieve_model };
 
 pub mod models;
 
@@ -56,7 +56,52 @@ impl OpenAI<'_> {
     }
 
     /// Lists the currently available models, and provides basic information about each one such as the owner and availability.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use openai::OpenAI;
+    /// use dotenv::dotenv;
+    /// use std::env;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     dotenv().expect("should load .env file");
+    ///
+    ///     let key = env::var("OPENAI_KEY").expect("env var OPENAI_KEY should be defined in .env file");
+    ///     let openai = OpenAI::new(&key, None);
+    ///
+    ///     dbg!(openai.list_models().await.expect("should list models"));
+    /// }
+    /// ```
     pub async fn list_models(&self) -> Result<ListObject<ModelObject>, reqwest::Error> {
         list_models(self).await
+    }
+
+    /// Retrieves a model instance, providing basic information about the model such as the owner and permissioning.
+    ///
+    /// # Arguments
+    ///
+    /// * `model` - The ID of the model to use for this request
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use openai::OpenAI;
+    /// use dotenv::dotenv;
+    /// use std::env;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     dotenv().expect("should load .env file");
+    ///
+    ///     let key = env::var("OPENAI_KEY").expect("env var OPENAI_KEY should be defined in .env file");
+    ///     let openai = OpenAI::new(&key, None);
+    ///
+    ///     dbg!(openai.retrieve_model("text-davinci-003").await.expect("should retrieve text-davinci-003 model"));
+    /// }
+    /// ```
+    pub async fn retrieve_model(&self, model: &str) -> Result<ModelObject, reqwest::Error> {
+        retrieve_model(self, model).await
     }
 }
