@@ -1,6 +1,5 @@
 use serde::Deserialize;
-use reqwest::header::{ AUTHORIZATION, HeaderMap, HeaderValue };
-use super::{ ListObject, OpenAI };
+use super::{ ListObject, OpenAI, openai_headers };
 
 #[derive(Deserialize, Debug)]
 pub struct ModelObject {
@@ -30,24 +29,8 @@ pub struct ModelPermissionObject {
 }
 
 pub(super) async fn list_models(openai: &OpenAI<'_>) -> Result<ListObject<ModelObject>, reqwest::Error> {
-    let mut headers = HeaderMap::new();
-
-    headers.append(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {}", openai.key))
-                .expect("HeaderValue should be created from key string"),
-        );
-
-    if openai.organization.is_some() {
-        headers.append(
-                "OpenAI-Organization",
-                HeaderValue::from_str(openai.organization.expect("organization should be some"))
-                    .expect("HeaderValue should be created from organization string"),
-            );
-    }
-
     let request = openai.client.get("https://api.openai.com/v1/models")
-            .headers(headers);
+            .headers(openai_headers(openai));
 
     request.send().await?.json().await
 }
