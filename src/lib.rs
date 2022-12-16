@@ -11,7 +11,7 @@ use models::{ list_models, ModelObject };
 
 pub mod models;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct ListObject<T> {
     pub data: Vec<T>,
     pub object: String,

@@ -2,7 +2,7 @@ use serde::Deserialize;
 use reqwest::header::{ AUTHORIZATION, HeaderMap, HeaderValue };
 use super::{ ListObject, OpenAI };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct ModelObject {
     pub id: String,
     pub object: String,
@@ -13,7 +13,7 @@ pub struct ModelObject {
     pub parent: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct ModelPermissionObject {
     pub id: String,
     pub object: String,
