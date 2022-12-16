@@ -55,6 +55,7 @@ impl OpenAI<'_> {
         }
     }
 
+    /// Lists the currently available models, and provides basic information about each one such as the owner and availability.
     pub async fn list_models(&self) -> Result<ListObject<ModelObject>, reqwest::Error> {
         list_models(self).await
     }
