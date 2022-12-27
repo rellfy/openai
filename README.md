@@ -22,11 +22,11 @@ An unofficial OpenAI API library for Rust.
  What this mainly means is less `create_completion()`, more `Completion::new()`
 
 ## Implementation Progress
-- [x] Models
+- [ ] Models
 - [ ] Completions
 - [ ] Edits
 - [ ] Images
-- [x] Embeddings
+- [ ] Embeddings
 - [ ] Files
 - [ ] Fine-tunes
 - [ ] Moderations
