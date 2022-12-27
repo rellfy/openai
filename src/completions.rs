@@ -2,7 +2,7 @@
 //! and can also return the probabilities of alternative tokens at each position.
 
 use serde::{ Deserialize, Serialize };
-use super::{ OpenAI, openai_headers };
+use super::{ OpenAI, Usage, openai_headers };
 use std::collections::HashMap;
 
 #[derive(Deserialize, Debug)]
@@ -12,7 +12,7 @@ pub struct TextCompletionObject {
     pub created: u32,
     pub model: String,
     pub choices: Vec<TextCompletionObjectChoices>,
-    pub usage: TextCompletionObjectUsage,
+    pub usage: Usage,
 }
 
 #[derive(Deserialize, Debug)]
@@ -21,13 +21,6 @@ pub struct TextCompletionObjectChoices {
     pub index: u8,
     pub logprobs: Option<u8>,
     pub finish_reason: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct TextCompletionObjectUsage {
-    pub prompt_tokens: u16,
-    pub completion_tokens: u16,
-    pub total_tokens: u32,
 }
 
 #[derive(Serialize, Default, Debug)]
