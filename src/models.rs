@@ -6,6 +6,9 @@ use serde::{ Deserialize, Serialize, de };
 use reqwest::{ Client, header::AUTHORIZATION, blocking };
 use crate::{ BASE_URL, get_token };
 
+// Should there be a way to request a list of all models?
+// Is it really needed? The enum has them all already.
+
 #[derive(Deserialize)]
 pub struct Model {
     pub id: ModelID,
