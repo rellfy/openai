@@ -17,6 +17,8 @@ pub struct Model {
 }
 
 impl Model {
+    //! Retrieves a model instance,
+    //! providing basic information about the model such as the owner and permissioning.
     pub async fn new(id: ModelID) -> Result<Model, reqwest::Error> {
         let client = Client::builder().build()?;
         let token = get_token();
