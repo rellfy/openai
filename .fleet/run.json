@@ -2,7 +2,12 @@
     "configurations": [
         {
             "type": "cargo",
-            "name": "Test All",
+            "name": "Check",
+            "cargoArgs": ["check"],
+        },
+        {
+            "type": "cargo",
+            "name": "Test",
             "cargoArgs": ["test"],
         },
     ]
