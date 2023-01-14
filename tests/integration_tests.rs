@@ -1,6 +1,3 @@
-// This is a mockup of what I want the library to look like.
-// These tests probably won't succeed, but when they do, that means the library is near-perfect
-
 use openai::{ embeddings::Embedding, models::ModelID };
 use dotenv::dotenv;
 
