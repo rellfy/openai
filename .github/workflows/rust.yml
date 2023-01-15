@@ -16,17 +16,21 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    
     - name: Cache
       uses: actions/cache@v3.2.3
       with:
-        # A list of files, directories, and wildcard patterns to cache and restore
         path: |
-          ~/.cargo
-          target
-        # An explicit key for restoring and saving the cache
-        key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        
     - name: Build
       run: cargo build --verbose
+      
     - name: Run tests
       run: cargo test --verbose
       env:
