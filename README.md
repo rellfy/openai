@@ -39,7 +39,8 @@ async fn main() {
 }
 ```
 The `completions` module is fairly close to completion. (Get it?)
-Once again, you may refer to the tests submodule for example code.
+
+Once again, you may refer to the `tests` submodule for example code.
 
 ## Implementation Progress
 `█████████░` Models
