@@ -70,7 +70,8 @@ mod tests {
 
     #[tokio::test]
     async fn embeddings() {
-        dotenv().unwrap(); // If it fails, assume we're not using a .env file
+        #![allow(unused_must_use)]
+        dotenv();
 
         let embeddings = Embeddings::new(
             ModelID::TextEmbeddingAda002,
@@ -88,7 +89,8 @@ mod tests {
 
     #[tokio::test]
     async fn embedding() {
-        dotenv().unwrap(); // If it fails, assume we're not using a .env file
+        #![allow(unused_must_use)]
+        dotenv();
 
         let embedding = Embedding::new(
             ModelID::TextEmbeddingAda002,
