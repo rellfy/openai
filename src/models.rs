@@ -27,7 +27,7 @@ impl Model {
         let token = get_token();
 
         client.get(format!("{BASE_URL}/models/{id}"))
-            .header(AUTHORIZATION, format!("Bearer {}", token))
+            .header(AUTHORIZATION, format!("Bearer {token}"))
             .send().await?.json().await
     }
 }

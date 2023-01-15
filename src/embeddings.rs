@@ -40,7 +40,7 @@ impl Embeddings {
         let token = get_token();
 
         let response: Embeddings = client.post(format!("{BASE_URL}/embeddings"))
-            .header(AUTHORIZATION, format!("Bearer {}", token))
+            .header(AUTHORIZATION, format!("Bearer {token}"))
             .json(&CreateEmbeddingsRequestBody { model, input, user })
             .send().await?.json().await?;
 
