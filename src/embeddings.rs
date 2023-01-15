@@ -70,8 +70,7 @@ mod tests {
 
     #[tokio::test]
     async fn embeddings() {
-        #![allow(unused_must_use)]
-        dotenv();
+        dotenv().ok();
 
         let embeddings = Embeddings::new(
             ModelID::TextEmbeddingAda002,
@@ -89,8 +88,7 @@ mod tests {
 
     #[tokio::test]
     async fn embedding() {
-        #![allow(unused_must_use)]
-        dotenv();
+        dotenv().ok();
 
         let embedding = Embedding::new(
             ModelID::TextEmbeddingAda002,

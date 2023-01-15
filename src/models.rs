@@ -328,8 +328,7 @@ mod tests {
 
     #[tokio::test]
     async fn can_get_model() {
-        #![allow(unused_must_use)]
-        dotenv();
+        dotenv().ok();
 
         let model = Model::new(ModelID::TextDavinci003).await
             .expect("should return model");
@@ -342,8 +341,7 @@ mod tests {
 
     #[tokio::test]
     async fn can_get_custom_model() {
-        #![allow(unused_must_use)]
-        dotenv();
+        dotenv().ok();
 
         let model = Model::new(
             ModelID::Custom("davinci:ft-personal-2022-12-12-04-49-51".to_string())
