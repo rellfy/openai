@@ -62,6 +62,7 @@ impl Embedding {
     }
 }
 
+// TODO: Find a more deterministic way of testing this
 #[cfg(test)]
 mod tests {
     use super::*;
