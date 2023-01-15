@@ -46,8 +46,9 @@ pub struct ModelPermission {
 }
 
 // TODO: Find a way to easily generate this enum
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub enum ModelID {
+    #[default]
     Babbage,
     Ada,
     Davinci,
@@ -328,8 +329,7 @@ mod tests {
     async fn can_get_model() {
         dotenv().ok();
 
-        let model = Model::new(ModelID::TextDavinci003).await
-            .expect("should return model");
+        let model = Model::new(ModelID::TextDavinci003).await.unwrap();
 
         assert_eq!(
             model.id,
@@ -343,8 +343,7 @@ mod tests {
 
         let model = Model::new(
             ModelID::Custom("davinci:ft-personal-2022-12-12-04-49-51".to_string())
-        ).await
-            .expect("should return model");
+        ).await.unwrap();
 
         assert_eq!(
             model.id,

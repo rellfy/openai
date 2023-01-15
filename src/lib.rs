@@ -3,6 +3,7 @@ use serde::Deserialize;
 use reqwest::{ RequestBuilder, header::AUTHORIZATION };
 
 pub mod models;
+pub mod completions;
 pub mod embeddings;
 
 pub(crate) const BASE_URL: &str = "https://api.openai.com/v1";
@@ -16,6 +17,7 @@ pub(crate) fn authorization(request: RequestBuilder) -> RequestBuilder {
 
 #[derive(Deserialize)]
 pub struct Usage {
-    pub prompt_tokens: u32,
-    pub total_tokens: u64,
+    pub prompt_tokens: u16,
+    pub completion_tokens: Option<u16>,
+    pub total_tokens: u32,
 }

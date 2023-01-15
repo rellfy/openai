@@ -38,11 +38,9 @@ impl Embeddings {
     pub async fn new(model: ModelID, input: Vec<&str>, user: Option<&str>) -> Result<Self, reqwest::Error> {
         let client = Client::builder().build()?;
 
-        let response: Embeddings = authorization(client.post(format!("{BASE_URL}/embeddings")))
+        authorization(client.post(format!("{BASE_URL}/embeddings")))
             .json(&CreateEmbeddingsRequestBody { model, input, user })
-            .send().await?.json().await?;
-
-        Ok(response)
+            .send().await?.json().await
     }
 }
 
@@ -78,12 +76,10 @@ mod tests {
             ModelID::TextEmbeddingAda002,
             vec!["The food was delicious and the waiter..."],
             None,
-        ).await.expect("should create embeddings");
+        ).await.unwrap();
 
         assert_eq!(
-            embeddings.data.first()
-                .expect("should have one embedding").vec.first()
-                .expect("should have at least one number"),
+            embeddings.data.first().unwrap().vec.first().unwrap(),
             &0.0023064255,
         )
     }
@@ -96,11 +92,10 @@ mod tests {
             ModelID::TextEmbeddingAda002,
             "The food was delicious and the waiter...",
             None,
-        ).await.expect("should create embedding");
+        ).await.unwrap();
 
         assert_eq!(
-            embedding.vec.first()
-                .expect("should have at least one number"),
+            embedding.vec.first().unwrap(),
             &0.0023064255,
         )
     }
