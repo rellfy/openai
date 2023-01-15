@@ -66,7 +66,7 @@ impl Embedding {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dotenv::dotenv;
+    use dotenvy::dotenv;
 
     #[tokio::test]
     async fn embeddings() {

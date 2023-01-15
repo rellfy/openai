@@ -294,7 +294,7 @@ impl std::fmt::Display for ModelID {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dotenv::dotenv;
+    use dotenvy::dotenv;
 
     #[test]
     fn model_id_serializes_as_expected() -> Result<(), serde_json::Error> {

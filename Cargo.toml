@@ -17,7 +17,7 @@ version = "1.0"
 features = ["derive"]
 
 [dev-dependencies]
-dotenv = "0.15"
+dotenvy = "0.15"
 
 [dev-dependencies.tokio]
 version = "1.23"
