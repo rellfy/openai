@@ -21,6 +21,24 @@ An unofficial Rust library for the OpenAI API.
  - What is this, C? No, it's Rust! We follow the object-oriented paradigm, not the procedural one.
  What this mainly means is less `create_completion()`, more `Completion::new()`
 
+## Examples
+You may refer to the `test` modules typically defined in each crate-level module for example code.
+As of writing this, the only complete module is the `embeddings` module, so here's an example of how to use that:
+```rs
+use openai::{ embeddings::Embedding, models::ModelID };
+
+#[tokio::main]
+async fn main() {
+    let embedding = Embedding::new(
+        ModelID::TextEmbeddingAda002,
+        "The food was delicious and the waiter...",
+        None,
+    ).await.unwrap();
+
+    println!("{}", embedding.vec.first().unwrap()); // prints "0.0023064255"... probably. This is AI, after all
+}
+```
+
 ## Implementation Progress
 `█████████░` Models
 
