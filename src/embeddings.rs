@@ -58,7 +58,11 @@ impl Embedding {
     pub async fn new(model: ModelID, input: &str, user: Option<&str>) -> Result<Self, reqwest::Error> {
         let embeddings = Embeddings::new(model, vec![input], user);
 
-        Ok(embeddings.await.expect("should create embeddings").data.swap_remove(0))
+        Ok(
+            embeddings
+                .await.expect("should create embeddings")
+                .data.swap_remove(0)
+        )
     }
 }
 
@@ -97,7 +101,8 @@ mod tests {
         ).await.expect("should create embedding");
 
         assert_eq!(
-            embedding.vec.first().expect("should have at least one number"),
+            embedding.vec.first()
+                .expect("should have at least one number"),
             &0.0023064255,
         )
     }
