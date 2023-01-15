@@ -3,8 +3,8 @@
 //! documentation to understand what models are available and the differences between them.
 
 use serde::{ Deserialize, Serialize, de };
-use reqwest::{ Client, header::AUTHORIZATION };
-use crate::{ BASE_URL, get_token };
+use reqwest::Client;
+use crate::{ BASE_URL, authorization };
 
 // Should there be a way to request a list of all models?
 // Is it really needed? The enum has them all already.
@@ -24,10 +24,8 @@ impl Model {
     //! providing basic information about the model such as the owner and permissioning.
     pub async fn new(id: ModelID) -> Result<Model, reqwest::Error> {
         let client = Client::builder().build()?;
-        let token = get_token();
 
-        client.get(format!("{BASE_URL}/models/{id}"))
-            .header(AUTHORIZATION, format!("Bearer {token}"))
+        authorization(client.get(format!("{BASE_URL}/models/{id}")))
             .send().await?.json().await
     }
 }

@@ -3,8 +3,8 @@
 //! Related guide: [Embeddings](https://beta.openai.com/docs/guides/embeddings)
 
 use serde::{ Deserialize, Serialize };
-use reqwest::{ Client, header::AUTHORIZATION };
-use super::{ BASE_URL, get_token, models::ModelID, Usage };
+use reqwest::Client;
+use super::{ BASE_URL, authorization, models::ModelID, Usage };
 
 #[derive(Serialize)]
 struct CreateEmbeddingsRequestBody<'a> {
@@ -37,10 +37,8 @@ impl Embeddings {
     ///   [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
     pub async fn new(model: ModelID, input: Vec<&str>, user: Option<&str>) -> Result<Self, reqwest::Error> {
         let client = Client::builder().build()?;
-        let token = get_token();
 
-        let response: Embeddings = client.post(format!("{BASE_URL}/embeddings"))
-            .header(AUTHORIZATION, format!("Bearer {token}"))
+        let response: Embeddings = authorization(client.post(format!("{BASE_URL}/embeddings")))
             .json(&CreateEmbeddingsRequestBody { model, input, user })
             .send().await?.json().await?;
 
