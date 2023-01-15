@@ -1,5 +1,5 @@
 # openai
-An unofficial OpenAI API library for Rust.
+An unofficial Rust library for the OpenAI API.
 
 > ## Currently in alpha
 > Not yet stable enough to be used in any production applications.
