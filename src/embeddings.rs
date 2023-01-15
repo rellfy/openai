@@ -4,22 +4,51 @@
 
 use serde::{ Deserialize, Serialize };
 use reqwest::{ Client, header::AUTHORIZATION };
-use super::{ BASE_URL, get_token, models::ModelID };
+use super::{ BASE_URL, get_token, models::ModelID, Usage };
 
 #[derive(Serialize)]
-struct NewEmbeddingRequestBody<'a> {
+struct CreateEmbeddingsRequestBody<'a> {
     model: ModelID,
-    input: &'a str,
+    input: Vec<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     user: Option<&'a str>,
 }
 
 #[derive(Deserialize)]
-struct NewEmbeddingRequestResponse {
-    data: Vec<Embedding>,
+pub struct Embeddings {
+    pub data: Vec<Embedding>,
+    pub model: ModelID,
+    pub usage: Usage,
 }
 
-#[derive(Deserialize, Debug)]
+impl Embeddings {
+    /// Creates an embedding vector representing the input text.
+    ///
+    /// # Arguments
+    ///
+    /// * `model` - ID of the model to use.
+    ///   You can use the [List models](https://beta.openai.com/docs/api-reference/models/list)
+    ///   API to see all of your available models, or see our [Model overview](https://beta.openai.com/docs/models/overview)
+    ///   for descriptions of them.
+    /// * `input` - Input text to get embeddings for, encoded as a string or array of tokens.
+    ///   To get embeddings for multiple inputs in a single request, pass an array of strings or array of token arrays.
+    ///   Each input must not exceed 8192 tokens in length.
+    /// * `user` - A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
+    ///   [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
+    pub async fn new(model: ModelID, input: Vec<&str>, user: Option<&str>) -> Result<Self, reqwest::Error> {
+        let client = Client::builder().build()?;
+        let token = get_token();
+
+        let response: Embeddings = client.post(format!("{BASE_URL}/embeddings"))
+            .header(AUTHORIZATION, format!("Bearer {}", token))
+            .json(&CreateEmbeddingsRequestBody { model, input, user })
+            .send().await?.json().await?;
+
+        Ok(response)
+    }
+}
+
+#[derive(Deserialize)]
 pub struct Embedding {
     #[serde(rename = "embedding")]
     pub vec: Vec<f32>,
@@ -27,17 +56,47 @@ pub struct Embedding {
 
 impl Embedding {
     pub async fn new(model: ModelID, input: &str, user: Option<&str>) -> Result<Self, reqwest::Error> {
-        let client = Client::builder().build()?;
-        let token = get_token();
+        let embeddings = Embeddings::new(model, vec![input], user);
 
-        let response: NewEmbeddingRequestResponse = client.post(format!("{BASE_URL}/embeddings"))
-            .header(AUTHORIZATION, format!("Bearer {}", token))
-            .json(&NewEmbeddingRequestBody { model, input, user })
-            .send().await?.json().await?;
+        Ok(embeddings.await.expect("should create embeddings").data.swap_remove(0))
+    }
+}
 
-        let embedding = response.data.into_iter().next()
-            .expect("there should be at least one item in vector");
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dotenv::dotenv;
 
-        Ok(embedding)
+    #[tokio::test]
+    async fn embeddings() {
+        dotenv().expect("should load .env file");
+
+        let embeddings = Embeddings::new(
+            ModelID::TextEmbeddingAda002,
+            vec!["The food was delicious and the waiter..."],
+            None,
+        ).await.expect("should create embeddings");
+
+        assert_eq!(
+            embeddings.data.first()
+                .expect("should have one embedding").vec.first()
+                .expect("should have at least one number"),
+            &0.0023064255,
+        )
+    }
+
+    #[tokio::test]
+    async fn embedding() {
+        dotenv().expect("should load .env file");
+
+        let embedding = Embedding::new(
+            ModelID::TextEmbeddingAda002, "The food was delicious and the waiter...",
+            None,
+        ).await.expect("should create embedding");
+
+        assert_eq!(
+            embedding.vec.first().expect("should have at least one number"),
+            &0.0023064255,
+        )
     }
 }

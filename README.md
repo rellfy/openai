@@ -26,7 +26,7 @@ An unofficial OpenAI API library for Rust.
 - [ ] Completions
 - [ ] Edits
 - [ ] Images
-- [ ] Embeddings
+- [x] Embeddings
 - [ ] Files
 - [ ] Fine-tunes
 - [ ] Moderations
