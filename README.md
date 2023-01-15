@@ -22,7 +22,7 @@ An unofficial Rust library for the OpenAI API.
  What this mainly means is less `create_completion()`, more `Completion::new()`
 
 ## Examples
-You may refer to the `test` modules typically defined in each crate-level module for example code.
+You may refer to the `tests` modules typically defined in each crate-level module for example code.
 As of writing this, the only complete module is the `embeddings` module, so here's an example of how to use that:
 ```rs
 use openai::{ embeddings::Embedding, models::ModelID };
