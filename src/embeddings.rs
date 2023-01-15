@@ -90,7 +90,8 @@ mod tests {
         dotenv().expect("should load .env file");
 
         let embedding = Embedding::new(
-            ModelID::TextEmbeddingAda002, "The food was delicious and the waiter...",
+            ModelID::TextEmbeddingAda002,
+            "The food was delicious and the waiter...",
             None,
         ).await.expect("should create embedding");
 
