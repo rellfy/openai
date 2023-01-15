@@ -3,7 +3,7 @@
 //! documentation to understand what models are available and the differences between them.
 
 use serde::{ Deserialize, Serialize, de };
-use reqwest::{ Client, header::AUTHORIZATION, blocking };
+use reqwest::{ Client, header::AUTHORIZATION };
 use crate::{ BASE_URL, get_token };
 
 // Should there be a way to request a list of all models?
@@ -29,19 +29,6 @@ impl Model {
         client.get(format!("{BASE_URL}/models/{id}"))
             .header(AUTHORIZATION, format!("Bearer {}", token))
             .send().await?.json().await
-    }
-}
-
-impl TryFrom<ModelID> for Model {
-    type Error = reqwest::Error;
-
-    fn try_from(value: ModelID) -> Result<Self, Self::Error> {
-        let client = blocking::Client::builder().build()?;
-        let token = get_token();
-
-        client.get(format!("{BASE_URL}/models/{value}"))
-            .header(AUTHORIZATION, format!("Bearer {}", token))
-            .send()?.json()
     }
 }
 
@@ -339,33 +326,31 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn can_get_model() {
+    #[tokio::test]
+    async fn can_get_model() {
         dotenv().expect("should load .env file");
 
-        let model = Model::try_from(ModelID::TextDavinci003)
+        let model = Model::new(ModelID::TextDavinci003).await
             .expect("should return model");
 
         assert_eq!(
-                model.permission.first()
-                .expect("should have at least one permission object").created,
-            1673644124,
+            model.id,
+            ModelID::TextDavinci003,
         )
     }
 
-    #[test]
-    fn can_get_custom_model() {
+    #[tokio::test]
+    async fn can_get_custom_model() {
         dotenv().expect("should load .env file");
 
-        let model = Model::try_from(
+        let model = Model::new(
             ModelID::Custom("davinci:ft-personal-2022-12-12-04-49-51".to_string())
-        )
+        ).await
             .expect("should return model");
 
         assert_eq!(
-            model.permission.first()
-                .expect("should have at least one permission object").created,
-            1670820592,
+            model.id,
+            ModelID::Custom("davinci:ft-personal-2022-12-12-04-49-51".to_string()),
         )
     }
 }
