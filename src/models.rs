@@ -296,7 +296,7 @@ mod tests {
     use dotenvy::dotenv;
 
     #[test]
-    fn model_id_serializes_as_expected() -> Result<(), serde_json::Error> {
+    fn model_id_serialization() -> Result<(), serde_json::Error> {
         assert_eq!(
             serde_json::ser::to_string(&ModelID::TextDavinci003)?,
             "\"text-davinci-003\"",
@@ -311,7 +311,7 @@ mod tests {
     }
 
     #[test]
-    fn model_id_deserializes_as_expected() -> Result<(), serde_json::Error> {
+    fn model_id_deserialization() -> Result<(), serde_json::Error> {
         assert_eq!(
             serde_json::de::from_str::<ModelID>("\"text-davinci-003\"")?,
             ModelID::TextDavinci003,
@@ -326,7 +326,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn can_get_model() {
+    async fn model() {
         dotenv().ok();
 
         let model = Model::new(ModelID::TextDavinci003).await.unwrap();
@@ -338,7 +338,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn can_get_custom_model() {
+    async fn custom_model() {
         dotenv().ok();
 
         let model = Model::new(
