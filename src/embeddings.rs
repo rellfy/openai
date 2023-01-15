@@ -70,7 +70,7 @@ mod tests {
 
     #[tokio::test]
     async fn embeddings() {
-        dotenv().expect("should load .env file");
+        dotenv().unwrap(); // If it fails, assume we're not using a .env file
 
         let embeddings = Embeddings::new(
             ModelID::TextEmbeddingAda002,
@@ -88,7 +88,7 @@ mod tests {
 
     #[tokio::test]
     async fn embedding() {
-        dotenv().expect("should load .env file");
+        dotenv().unwrap(); // If it fails, assume we're not using a .env file
 
         let embedding = Embedding::new(
             ModelID::TextEmbeddingAda002,

@@ -328,7 +328,7 @@ mod tests {
 
     #[tokio::test]
     async fn can_get_model() {
-        dotenv().expect("should load .env file");
+        dotenv().unwrap(); // If it fails, assume we're not using a .env file
 
         let model = Model::new(ModelID::TextDavinci003).await
             .expect("should return model");
@@ -341,7 +341,7 @@ mod tests {
 
     #[tokio::test]
     async fn can_get_custom_model() {
-        dotenv().expect("should load .env file");
+        dotenv().unwrap(); // If it fails, assume we're not using a .env file
 
         let model = Model::new(
             ModelID::Custom("davinci:ft-personal-2022-12-12-04-49-51".to_string())
