@@ -1,0 +1,61 @@
+name: Bug Report
+description: Report a bug you've encountered.
+body:
+  - type: textarea
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Reproduction Steps
+      description: Steps to reproduce the behavior.
+      value: |
+        1. Do this
+        2. Do that
+        3. ...
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Terminal Output
+      description: (If applicable.) Automatically formatted as a code block.
+      render: text
+  - type: input
+    attributes:
+      label: Library Version
+      placeholder: 1.0.0-alpha
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: `rustc` Version
+      description: Found using `rustc --version`.
+      placeholder: 1.66.0 (69f9c33d7 2022-12-12)
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: `cargo` Version
+      description: Found using `cargo --version`.
+      placeholder: 1.66.0 (d65d197ad 2022-11-15)
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Platform
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+labels: ["bug"]
