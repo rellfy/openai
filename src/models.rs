@@ -326,7 +326,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg_attr(no_key, ignore = "OPENAI_KEY env var not found during compile time")]
+    #[cfg_attr(no_key, ignore)]
     async fn model() {
         dotenv().ok();
 
@@ -339,7 +339,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg_attr(no_key, ignore = "OPENAI_KEY env var not found during compile time")]
+    #[cfg_attr(no_key, ignore)]
     async fn custom_model() {
         dotenv().ok();
 
