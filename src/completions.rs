@@ -151,6 +151,7 @@ mod tests {
     use dotenvy::dotenv;
 
     #[tokio::test]
+    #[cfg_attr(no_key, ignore = "OPENAI_KEY env var not found during compile time")]
     async fn completion() {
         dotenv().ok();
         

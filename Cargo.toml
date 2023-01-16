@@ -22,3 +22,6 @@ dotenvy = "0.15"
 [dev-dependencies.tokio]
 version = "1.23"
 features = ["full"]
+
+[build-dependencies]
+dotenvy = "0.15"
