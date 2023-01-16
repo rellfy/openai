@@ -1,0 +1,23 @@
+name: Feature Request
+description: Suggest a way to enhance this project.
+body:
+  - type: textarea
+    attributes:
+      label: Problem
+      description: Describe the problem you intend to fix.
+      placeholder: I just wish it was easier to...
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Solution
+      description: Describe how you think the aforementioned problem should be resolved.
+      placeholder: This wouldn't be a problem if...
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Alternatives
+      description: List any alternatives you've considered as a solution.
+      placeholder: We could also [...] or add [...] to fix the problem.
+labels: ["enhancement"]
