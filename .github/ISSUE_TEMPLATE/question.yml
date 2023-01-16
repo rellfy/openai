@@ -1,0 +1,10 @@
+name: Question
+description: Ask for information or help on something.
+body:
+  - type: textarea
+    attributes:
+      label: Question
+      placeholder: How do you...?
+    validations:
+      required: true
+labels: ["question"]
