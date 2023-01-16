@@ -36,15 +36,15 @@ body:
       required: true
   - type: input
     attributes:
-      label: `rustc` Version
-      description: Found using `rustc --version`.
+      label: "`rustc` Version"
+      description: "Found using `rustc --version`."
       placeholder: 1.66.0 (69f9c33d7 2022-12-12)
     validations:
       required: true
   - type: input
     attributes:
-      label: `cargo` Version
-      description: Found using `cargo --version`.
+      label: "`cargo` Version"
+      description: "Found using `cargo --version`."
       placeholder: 1.66.0 (d65d197ad 2022-11-15)
     validations:
       required: true
