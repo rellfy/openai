@@ -29,6 +29,8 @@ jobs:
         
     - name: Build
       run: cargo build --verbose
+      env:
+        OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
       
     - name: Run tests
       run: cargo test --verbose
