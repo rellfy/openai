@@ -3,6 +3,7 @@ use openai::{
     models::ModelID,
 };
 use dotenvy::dotenv;
+use std::io::stdin;
 
 #[tokio::main]
 async fn main() {
@@ -14,7 +15,7 @@ async fn main() {
 
         let mut prompt = String::new();
 
-        std::io::stdin().read_line(&mut prompt).unwrap();
+        stdin().read_line(&mut prompt).unwrap();
 
         let completion = Completion::new(&CreateCompletionRequestBody {
             model: ModelID::TextDavinci003,
