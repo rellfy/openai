@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
 
 jobs:
   build:
@@ -32,5 +33,3 @@ jobs:
       
     - name: Run tests
       run: cargo test --verbose
-      env:
-        OPENAI_KEY: ${{ secrets.OPENAI_KEY }}

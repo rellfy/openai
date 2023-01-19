@@ -40,7 +40,8 @@ async fn main() {
 ```
 The `completions` module is fairly close to completion. (Get it?)
 
-Once again, you may refer to the `tests` submodule for example code.
+A full example project for this module has been made and can be found in the `examples` subdirectory.
+This can be helpful as a template, but there is still more diverse code in the unit tests.
 
 ## Implementation Progress
 `█████████░` Models
