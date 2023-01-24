@@ -23,7 +23,7 @@ An unofficial Rust library for the OpenAI API.
 
 ## Examples
 You may refer to the `tests` submodules typically defined in each module for example code.
-As of writing this, the only complete module is the `embeddings` module, so here's an example of how to use that:
+As of writing this, the most complete module is the `embeddings` module, so here's an example of how to use that:
 ```rs
 use openai::{ embeddings::Embedding, models::ModelID };
 
@@ -44,15 +44,15 @@ A full example project for this module has been made and can be found in the `ex
 This can be helpful as a template, but there is still more diverse code in the unit tests.
 
 ## Implementation Progress
-`█████████░` Models
+`████████░░` Models
 
-`███████░░░` Completions
+`████████░░` Completions
 
 `░░░░░░░░░░` Edits
 
 `░░░░░░░░░░` Images
 
-`██████████` Embeddings
+`█████████░` Embeddings
 
 `░░░░░░░░░░` Files
 
