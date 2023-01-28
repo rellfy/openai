@@ -44,7 +44,7 @@ A full example project for this module has been made and can be found in the `ex
 This can be helpful as a template, but there is still more diverse code in the unit tests.
 
 ## Implementation Progress
-`████████░░` Models
+`██████████` Models
 
 `████████░░` Completions
 

@@ -7,9 +7,6 @@ use reqwest::Client;
 use openai_proc_macros::generate_model_id_enum;
 use openai_utils::{ BASE_URL, authorization };
 
-// Should there be a way to request a list of all models?
-// Is it really needed? The enum has them all already.
-
 #[derive(Deserialize)]
 pub struct Model {
     pub id: ModelID,
