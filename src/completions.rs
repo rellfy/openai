@@ -2,9 +2,10 @@
 //! and can also return the probabilities of alternative tokens at each position.
 
 use serde::{ Deserialize, Serialize };
-use super::{ models::ModelID, Usage, BASE_URL, authorization };
+use super::{ models::ModelID, Usage };
 use std::collections::HashMap;
 use reqwest::Client;
+use openai_utils::{ BASE_URL, authorization };
 
 #[derive(Deserialize)]
 pub struct Completion {
@@ -26,7 +27,7 @@ impl Completion {
 
         let client = Client::builder().build()?;
 
-        authorization(client.post(format!("{BASE_URL}/completions")))
+        authorization!(client.post(format!("{BASE_URL}/completions")))
             .json(body)
             .send().await?.json().await
     }

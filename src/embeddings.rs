@@ -4,7 +4,8 @@
 
 use serde::{ Deserialize, Serialize };
 use reqwest::Client;
-use super::{ BASE_URL, authorization, models::ModelID, Usage };
+use super::{ models::ModelID, Usage };
+use openai_utils::{ BASE_URL, authorization };
 
 #[derive(Serialize)]
 struct CreateEmbeddingsRequestBody<'a> {
@@ -38,7 +39,7 @@ impl Embeddings {
     pub async fn new(model: ModelID, input: Vec<&str>, user: Option<&str>) -> Result<Self, reqwest::Error> {
         let client = Client::builder().build()?;
 
-        authorization(client.post(format!("{BASE_URL}/embeddings")))
+        authorization!(client.post(format!("{BASE_URL}/embeddings")))
             .json(&CreateEmbeddingsRequestBody { model, input, user })
             .send().await?.json().await
     }

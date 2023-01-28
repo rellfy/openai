@@ -1,12 +1,16 @@
 [package]
 name = "openai"
-version = "1.0.0-alpha"
-edition = "2021"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 serde_json = "1.0"
+dotenvy = "0.15"
 
 [dependencies.reqwest]
 version = "0.11"
@@ -16,8 +20,11 @@ features = ["json"]
 version = "1.0"
 features = ["derive"]
 
-[dev-dependencies]
-dotenvy = "0.15"
+[dependencies.openai_proc_macros]
+path = "openai_proc_macros"
+
+[dependencies.openai_utils]
+path = "openai_utils"
 
 [dev-dependencies.tokio]
 version = "1.24"
@@ -25,3 +32,10 @@ features = ["full"]
 
 [build-dependencies]
 dotenvy = "0.15"
+
+[workspace.package]
+version = "1.0.0-alpha"
+authors = ["valentinegb"]
+edition = "2021"
+repository = "https://github.com/valentinegb/openai"
+license = "AGPL-3.0-only"
