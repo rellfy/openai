@@ -33,6 +33,9 @@ features = ["full"]
 [build-dependencies]
 dotenvy = "0.15"
 
+[workspace]
+exclude = ["examples"]
+
 [workspace.package]
 version = "1.0.0-alpha"
 authors = ["valentinegb"]
