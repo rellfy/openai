@@ -22,9 +22,13 @@ An unofficial Rust library for the OpenAI API.
  What this mainly means is less `create_completion()`, more `Completion::new()`
 
 ## Examples
-I'm still working on making examples in the `examples` directory. If you're looking to work with the `completions` module, you're in luck! Because that's the only module there is an example for right now. For other modules, you can look at the `tests` submodules for some reference.
+I'm still working on making examples in the `examples` directory.
+If you're looking to work with the `completions` module, you're in luck!
+Because that's the only module there is an example for right now.
+For other modules, you can look at the `tests` submodules for some reference.
 
-Examples come slowly because this project, in its current state, changes very quickly, and it's not fun making sure all examples accurately reflect the latest version. But, they are coming, don't worry!
+Examples come slowly because this project, in its current state, changes very quickly,
+and it's not fun making sure all examples accurately reflect the latest version. But, they are coming, don't worry!
 
 ## Implementation Progress
 `██████████` Models
