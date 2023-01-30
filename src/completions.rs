@@ -152,7 +152,6 @@ mod tests {
     use dotenvy::dotenv;
 
     #[tokio::test]
-    #[cfg_attr(no_key, ignore)]
     async fn completion() {
         dotenv().ok();
         
