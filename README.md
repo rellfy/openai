@@ -22,26 +22,9 @@ An unofficial Rust library for the OpenAI API.
  What this mainly means is less `create_completion()`, more `Completion::new()`
 
 ## Examples
-You may refer to the `tests` submodules typically defined in each module for example code.
-As of writing this, the most complete module is the `embeddings` module, so here's an example of how to use that:
-```rs
-use openai::{ embeddings::Embedding, models::ModelID };
+I'm still working on making examples in the `examples` directory. If you're looking to work with the `completions` module, you're in luck! Because that's the only module there is an example for right now. For other modules, you can look at the `tests` submodules for some reference.
 
-#[tokio::main]
-async fn main() {
-    let embedding = Embedding::new(
-        ModelID::TextEmbeddingAda002,
-        "The food was delicious and the waiter...",
-        None,
-    ).await.unwrap();
-
-    println!("{}", embedding.vec.first().unwrap()); // prints "0.0023064255"... probably. This is AI, after all
-}
-```
-The `completions` module is fairly close to completion. (Get it?)
-
-A full example project for this module has been made and can be found in the `examples` subdirectory.
-This can be helpful as a template, but there is still more diverse code in the unit tests.
+Examples come slowly because this project, in its current state, changes very quickly, and it's not fun making sure all examples accurately reflect the latest version. But, they are coming, don't worry!
 
 ## Implementation Progress
 `██████████` Models
