@@ -93,7 +93,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg_attr(no_key, ignore)]
     async fn model() {
         dotenv().ok();
 
@@ -106,7 +105,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg_attr(no_key, ignore)]
     async fn custom_model() {
         dotenv().ok();
 

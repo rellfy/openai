@@ -69,7 +69,6 @@ mod tests {
     use dotenvy::dotenv;
 
     #[tokio::test]
-    #[cfg_attr(no_key, ignore)]
     async fn embeddings() {
         dotenv().ok();
 
@@ -83,7 +82,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg_attr(no_key, ignore)]
     async fn embedding() {
         dotenv().ok();
 
