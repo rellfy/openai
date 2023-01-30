@@ -9,6 +9,11 @@ body:
       required: true
   - type: textarea
     attributes:
+      label: Terminal Output
+      description: (If applicable.) Automatically formatted as a code block.
+      render: text
+  - type: textarea
+    attributes:
       label: Reproduction Steps
       description: Steps to reproduce the behavior.
       value: |
@@ -25,9 +30,8 @@ body:
       required: true
   - type: textarea
     attributes:
-      label: Terminal Output
-      description: (If applicable.) Automatically formatted as a code block.
-      render: text
+      label: Workaround
+      description: If you've found a temporary workaround, please describe it here.
   - type: input
     attributes:
       label: Library Version
