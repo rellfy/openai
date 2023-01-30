@@ -54,11 +54,11 @@ pub struct CreateCompletionRequestBody<'a> {
     ///
     /// Note that <|endoftext|> is the document separator that the model sees during training,
     /// so if a prompt is not specified the model will generate as if from the beginning of a new document.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub prompt: Option<&'a str>,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    pub prompt: &'a str,
     /// The suffix that comes after a completion of inserted text.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub suffix: Option<&'a str>,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    pub suffix: &'a str,
     /// The maximum number of [tokens](https://beta.openai.com/tokenizer) to generate in the completion.
     ///
     /// The token count of your prompt plus `max_tokens` cannot exceed the model's context length.
@@ -103,8 +103,8 @@ pub struct CreateCompletionRequestBody<'a> {
     pub echo: Option<bool>,
     /// Up to 4 sequences where the API will stop generating further tokens.
     /// The returned text will not contain the stop sequence.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub stop: Option<Vec<&'a str>>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub stop: Vec<&'a str>,
     /// Number between -2.0 and 2.0.
     /// Positive values penalize new tokens based on whether they appear in the text so far,
     /// increasing the model's likelihood to talk about new topics.
@@ -138,12 +138,12 @@ pub struct CreateCompletionRequestBody<'a> {
     /// values like -100 or 100 should result in a ban or exclusive selection of the relevant token.
     ///
     /// As an example, you can pass `{"50256": -100}` to prevent the <|endoftext|> token from being generated.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub logit_bias: Option<HashMap<&'a str, i16>>,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub logit_bias: HashMap<&'a str, i16>,
     /// A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     /// [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub user: Option<&'a str>,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    pub user: &'a str,
 }
 
 #[cfg(test)]
@@ -158,7 +158,7 @@ mod tests {
         
         let completion = Completion::new(&CreateCompletionRequestBody {
             model: ModelID::TextDavinci003,
-            prompt: Some("Say this is a test"),
+            prompt: "Say this is a test",
             max_tokens: Some(7),
             temperature: Some(0),
             ..Default::default()

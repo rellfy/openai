@@ -19,7 +19,7 @@ async fn main() {
 
         let completion = Completion::new(&CreateCompletionRequestBody {
             model: ModelID::TextDavinci003,
-            prompt: Some(&prompt),
+            prompt: &prompt,
             max_tokens: Some(1024),
             ..Default::default()
         }).await.unwrap();

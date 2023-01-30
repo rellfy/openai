@@ -48,7 +48,7 @@ This can be helpful as a template, but there is still more diverse code in the u
 
 `████████░░` Completions
 
-`░░░░░░░░░░` Edits
+`██████████` Edits
 
 `░░░░░░░░░░` Images
 
