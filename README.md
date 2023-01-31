@@ -47,7 +47,7 @@ OPENAI_KEY=put-your-api-key-here
 ```
 
 Then, you need to load the contents of your `.env` file when your program starts.
-For this, I recomend a crate such as [dotenvy](https://github.com/allan2/dotenvy).
+For this, I recommend a crate such as [dotenvy](https://github.com/allan2/dotenvy).
 
 ## Implementation Progress
 
