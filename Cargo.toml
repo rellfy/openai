@@ -37,7 +37,7 @@ dotenvy = "0.15"
 exclude = ["examples"]
 
 [workspace.package]
-version = "1.0.0-alpha.1"
+version = "1.0.0-alpha.2"
 authors = ["valentinegb"]
 edition = "2021"
 repository = "https://github.com/valentinegb/openai"
