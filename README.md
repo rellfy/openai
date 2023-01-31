@@ -12,6 +12,7 @@ An unofficial Rust library for the OpenAI API.
   functions should be accessed from their own modules.
 - Environmental variables should be the prioitized method of authentication,
   but you shouldn't be forced to do things this way.
+  (Currently, you kind of are, because the API key is needed during compile-time.)
 - This is a LIBRARY, not a WRAPPER!
   The goal here isn't to just give some basic wrapper functions for making HTTP requests,
   it's to "rust-ify" things. We want to create the illusion that the OpenAI API was made in Rust first!
@@ -47,9 +48,6 @@ OPENAI_KEY=put-your-api-key-here
 
 Then, you need to load the contents of your `.env` file when your program starts.
 For this, I recomend a crate such as [dotenvy](https://github.com/allan2/dotenvy).
-
-Soon, there will be a way to define your API key *without* an environment variable,
-because I realize that isn't always the best way to do things.
 
 ## Implementation Progress
 
