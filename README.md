@@ -20,6 +20,28 @@ An unofficial Rust library for the OpenAI API.
 - What is this, C? No, it's Rust! We follow the object-oriented paradigm, not the procedural one.
   What this mainly means is less `create_completion()`, more `Completion::new()`.
 
+## Installation
+
+This library is not yet on [crates.io](https://crates.io) unfortunately,
+but you can use the GitHub releases as a dependency like so:
+
+```toml
+[dependencies]
+openai = { git = "https://github.com/valentinegb/openai", tag = "VERSION" }
+```
+
+or if you clone the repository:
+
+```toml
+[dependencies]
+openai = { path = "openai", version = "VERSION" }
+```
+
+where VERSION is the release you want to use, for example `v1.0.0-alpha.1`.
+
+If you use git, you can also use the `main` branch of this repository (`branch = "main"`),
+but I don't recommend it, as I can't guarantee every commit is error free.
+
 ## Examples
 
 I'm still working on making examples in the `examples` directory.
