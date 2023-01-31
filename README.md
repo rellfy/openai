@@ -37,7 +37,7 @@ or if you clone the repository:
 openai = { path = "openai", version = "VERSION" }
 ```
 
-where VERSION is the release you want to use, for example `v1.0.0-alpha.1`.
+where VERSION is the version or release you want to use, for example `v1.0.0-alpha.1`.
 
 If you use git, you can also use the `main` branch of this repository (`branch = "main"`),
 but I don't recommend it, as I can't guarantee every commit is error free.
