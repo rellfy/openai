@@ -5,6 +5,7 @@ An unofficial Rust library for the OpenAI API.
 > **Warning**
 > 
 > Currently in alpha, not yet stable enough to be used in any production applications.
+> See [Implementation Progress](#implementation-progress).
 
 ## Core Principles
 
