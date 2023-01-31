@@ -23,7 +23,7 @@ An unofficial Rust library for the OpenAI API.
 ## Installation
 
 This library is not yet on [crates.io](https://crates.io) unfortunately,
-but you can use the GitHub releases as a dependency like so:
+but you can use a GitHub release as a dependency like so:
 
 ```toml
 [dependencies]
