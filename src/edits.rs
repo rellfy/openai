@@ -82,6 +82,6 @@ mod tests {
             ..Default::default()
         }).await.unwrap();
 
-        assert_eq!(edit.choices.first().unwrap(), "What day of the week is it?\n")
+        assert_eq!(edit.choices.first().unwrap(), "What day of the week is it?\n");
     }
 }

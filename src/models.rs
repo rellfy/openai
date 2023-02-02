@@ -101,7 +101,7 @@ mod tests {
         assert_eq!(
             model.id,
             ModelID::TextDavinci003,
-        )
+        );
     }
 
     #[tokio::test]
@@ -115,6 +115,6 @@ mod tests {
         assert_eq!(
             model.id,
             ModelID::Custom("davinci:ft-personal-2022-12-12-04-49-51".to_string()),
-        )
+        );
     }
 }

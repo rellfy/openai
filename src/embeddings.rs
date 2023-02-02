@@ -100,7 +100,7 @@ mod tests {
             "",
         ).await.unwrap();
 
-        assert!(!embeddings.data.first().unwrap().vec.is_empty())
+        assert!(!embeddings.data.first().unwrap().vec.is_empty());
     }
 
     #[tokio::test]
@@ -113,7 +113,7 @@ mod tests {
             "",
         ).await.unwrap();
 
-        assert!(!embedding.vec.is_empty())
+        assert!(!embedding.vec.is_empty());
     }
 
     #[tokio::test]
@@ -131,8 +131,24 @@ mod tests {
             "",
         ).await.unwrap();
 
-        dbg!(embeddings.distances());
+        let distances = embeddings.distances();
 
-        todo!("consult Mr. Ruiz on what the result *should* be and execute `assert_eq!()` on it and what we actually get");
+        dbg!(&distances);
+
+        assert!(distances[0] < distances[1]);
+    }
+
+    #[test]
+    fn right_angle_test() {
+        let embeddings = Embeddings {
+            data: vec![
+                Embedding { vec: vec![1.0, 0.0] },
+                Embedding { vec: vec![0.0, 1.0] },
+            ],
+            model: ModelID::TextEmbeddingAda002,
+            usage: Usage { prompt_tokens: 0, completion_tokens: Some(0), total_tokens: 0 },
+        };
+
+        assert_eq!(embeddings.distances()[0], 0.0);
     }
 }
