@@ -43,6 +43,21 @@ impl Embeddings {
             .json(&CreateEmbeddingsRequestBody { model, input, user })
             .send().await?.json().await
     }
+
+    pub fn distances(&self) -> Vec<f32> {
+        let mut distances = Vec::new();
+        let mut last_embedding: Option<&Embedding> = None;
+
+        for embedding in &self.data {
+            if let Some(other) = last_embedding {
+                distances.push(embedding.distance(other));
+            }
+
+            last_embedding = Some(embedding);
+        }
+
+        distances
+    }
 }
 
 #[derive(Deserialize)]
@@ -60,6 +75,13 @@ impl Embedding {
                 .await.expect("should create embeddings")
                 .data.swap_remove(0)
         )
+    }
+
+    pub fn distance(&self, other: &Self) -> f32 {
+        let dot_product: f32 = self.vec.iter().zip(other.vec.iter()).map(|(x, y)| x * y).sum();
+        let product_of_lengths = (self.vec.len() * other.vec.len()) as f32;
+
+        dot_product / product_of_lengths
     }
 }
 
@@ -92,5 +114,25 @@ mod tests {
         ).await.unwrap();
 
         assert!(!embedding.vec.is_empty())
+    }
+
+    #[tokio::test]
+    async fn distances() {
+        dotenv().ok();
+
+        let embeddings = Embeddings::new(
+            ModelID::TextEmbeddingAda002,
+            vec![
+                "The food was delicious and the waiter...",
+                "I loved the service! When they came to take my order...",
+                "Disgusting. All over the floor, there was...",
+                "Hated it there! Bad bad bad! Bad food, bad service, bad...",
+            ],
+            "",
+        ).await.unwrap();
+
+        dbg!(embeddings.distances());
+
+        todo!("consult Mr. Ruiz on what the result *should* be and execute `assert_eq!()` on it and what we actually get");
     }
 }
