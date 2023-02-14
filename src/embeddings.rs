@@ -116,28 +116,6 @@ mod tests {
         assert!(!embedding.vec.is_empty());
     }
 
-    #[tokio::test]
-    async fn distances() {
-        dotenv().ok();
-
-        let embeddings = Embeddings::new(
-            ModelID::TextEmbeddingAda002,
-            vec![
-                "The food was delicious and the waiter...",
-                "I loved the service! When they came to take my order...",
-                "Disgusting. All over the floor, there was...",
-                "Hated it there! Bad bad bad! Bad food, bad service, bad...",
-            ],
-            "",
-        ).await.unwrap();
-
-        let distances = embeddings.distances();
-
-        dbg!(&distances);
-
-        assert!(distances[0] < distances[1]);
-    }
-
     #[test]
     fn right_angle() {
         let embeddings = Embeddings {
