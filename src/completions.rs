@@ -71,14 +71,14 @@ pub struct CreateCompletionRequestBody<'a> {
     ///
     /// We generally recommend altering this or `top_p` but not both.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub temperature: Option<u8>,
+    pub temperature: Option<f32>,
     /// An alternative to sampling with temperature, called nucleus sampling,
     /// where the model considers the results of the tokens with top_p probability mass.
     /// So 0.1 means only the tokens comprising the top 10% probability mass are considered.
     ///
     /// We generally recommend altering this or `temperature` but not both.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub top_p: Option<u8>,
+    pub top_p: Option<f32>,
     /// How many completions to generate for each prompt.
     ///
     /// **Note:** Because this parameter generates many completions, it can quickly consume your token quota.
@@ -159,7 +159,7 @@ mod tests {
             model: ModelID::TextDavinci003,
             prompt: "Say this is a test",
             max_tokens: Some(7),
-            temperature: Some(0),
+            temperature: Some(0.0),
             ..Default::default()
         }).await.unwrap();
 
