@@ -139,16 +139,30 @@ mod tests {
     }
 
     #[test]
-    fn right_angle_test() {
+    fn right_angle() {
         let embeddings = Embeddings {
             data: vec![
-                Embedding { vec: vec![1.0, 0.0] },
-                Embedding { vec: vec![0.0, 1.0] },
+                Embedding { vec: vec![1.0, 0.0, 0.0] },
+                Embedding { vec: vec![0.0, 1.0, 0.0] },
             ],
             model: ModelID::TextEmbeddingAda002,
             usage: Usage { prompt_tokens: 0, completion_tokens: Some(0), total_tokens: 0 },
         };
 
         assert_eq!(embeddings.distances()[0], 0.0);
+    }
+
+    #[test]
+    fn non_right_angle() {
+        let embeddings = Embeddings {
+            data: vec![
+                Embedding { vec: vec![1.0, 1.0, 0.0] },
+                Embedding { vec: vec![0.0, 1.0, 0.0] },
+            ],
+            model: ModelID::TextEmbeddingAda002,
+            usage: Usage { prompt_tokens: 0, completion_tokens: Some(0), total_tokens: 0 },
+        };
+
+        assert_ne!(embeddings.distances()[0], 0.0);
     }
 }
