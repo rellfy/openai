@@ -3,7 +3,7 @@
 //! Related guide: [Embeddings](https://beta.openai.com/docs/guides/embeddings)
 
 use super::{handle_api, models::ModelID, ModifiedApiResponse, Usage};
-use openai_utils::{authorization, BASE_URL};
+use openai_bootstrap::{authorization, BASE_URL};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -43,12 +43,27 @@ impl Embeddings {
 
         handle_api(request).await
     }
+
+    pub fn distances(&self) -> Vec<f64> {
+        let mut distances = Vec::new();
+        let mut last_embedding: Option<&Embedding> = None;
+
+        for embedding in &self.data {
+            if let Some(other) = last_embedding {
+                distances.push(embedding.distance(other));
+            }
+
+            last_embedding = Some(embedding);
+        }
+
+        distances
+    }
 }
 
 #[derive(Deserialize)]
 pub struct Embedding {
     #[serde(rename = "embedding")]
-    pub vec: Vec<f32>,
+    pub vec: Vec<f64>,
 }
 
 impl Embedding {
@@ -59,6 +74,18 @@ impl Embedding {
             Ok(mut embeddings) => Ok(Ok(embeddings.data.swap_remove(0))),
             Err(error) => Ok(Err(error)),
         }
+    }
+
+    pub fn distance(&self, other: &Self) -> f64 {
+        let dot_product: f64 = self
+            .vec
+            .iter()
+            .zip(other.vec.iter())
+            .map(|(x, y)| x * y)
+            .sum();
+        let product_of_lengths = (self.vec.len() * other.vec.len()) as f64;
+
+        dot_product / product_of_lengths
     }
 }
 
@@ -80,7 +107,7 @@ mod tests {
         .unwrap()
         .unwrap();
 
-        assert!(!embeddings.data.first().unwrap().vec.is_empty())
+        assert!(!embeddings.data.first().unwrap().vec.is_empty());
     }
 
     #[tokio::test]
@@ -96,6 +123,50 @@ mod tests {
         .unwrap()
         .unwrap();
 
-        assert!(!embedding.vec.is_empty())
+        assert!(!embedding.vec.is_empty());
+    }
+
+    #[test]
+    fn right_angle() {
+        let embeddings = Embeddings {
+            data: vec![
+                Embedding {
+                    vec: vec![1.0, 0.0, 0.0],
+                },
+                Embedding {
+                    vec: vec![0.0, 1.0, 0.0],
+                },
+            ],
+            model: ModelID::TextEmbeddingAda002,
+            usage: Usage {
+                prompt_tokens: 0,
+                completion_tokens: Some(0),
+                total_tokens: 0,
+            },
+        };
+
+        assert_eq!(embeddings.distances()[0], 0.0);
+    }
+
+    #[test]
+    fn non_right_angle() {
+        let embeddings = Embeddings {
+            data: vec![
+                Embedding {
+                    vec: vec![1.0, 1.0, 0.0],
+                },
+                Embedding {
+                    vec: vec![0.0, 1.0, 0.0],
+                },
+            ],
+            model: ModelID::TextEmbeddingAda002,
+            usage: Usage {
+                prompt_tokens: 0,
+                completion_tokens: Some(0),
+                total_tokens: 0,
+            },
+        };
+
+        assert_ne!(embeddings.distances()[0], 0.0);
     }
 }

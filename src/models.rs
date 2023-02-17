@@ -4,7 +4,7 @@
 
 use super::{handle_api, ModifiedApiResponse};
 use openai_proc_macros::generate_model_id_enum;
-use openai_utils::{authorization, BASE_URL};
+use openai_bootstrap::{ BASE_URL, authorization };
 use reqwest::Client;
 use serde::Deserialize;
 
@@ -99,7 +99,10 @@ mod tests {
 
         let model = Model::new(ModelID::TextDavinci003).await.unwrap().unwrap();
 
-        assert_eq!(model.id, ModelID::TextDavinci003,)
+        assert_eq!(
+            model.id,
+            ModelID::TextDavinci003,
+        );
     }
 
     #[tokio::test]
@@ -116,6 +119,6 @@ mod tests {
         assert_eq!(
             model.id,
             ModelID::Custom("davinci:ft-personal-2022-12-12-04-49-51".to_string()),
-        )
+        );
     }
 }

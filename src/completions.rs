@@ -2,7 +2,7 @@
 //! and can also return the probabilities of alternative tokens at each position.
 
 use super::{handle_api, models::ModelID, ModifiedApiResponse, Usage};
-use openai_utils::{authorization, BASE_URL};
+use openai_bootstrap::{ BASE_URL, authorization };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

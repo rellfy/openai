@@ -1,7 +1,7 @@
 //! Given a prompt and an instruction, the model will return an edited version of the prompt.
 
 use super::{handle_api, models::ModelID, ModifiedApiResponse, OpenAiError, Usage};
-use openai_utils::{authorization, BASE_URL};
+use openai_bootstrap::{ BASE_URL, authorization };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -91,6 +91,6 @@ mod tests {
         assert_eq!(
             edit.choices.first().unwrap(),
             "What day of the week is it?\n"
-        )
+        );
     }
 }
