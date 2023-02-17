@@ -23,8 +23,8 @@ features = ["derive"]
 [dependencies.openai_proc_macros]
 path = "openai_proc_macros"
 
-[dependencies.openai_utils]
-path = "openai_utils"
+[dependencies.openai_bootstrap]
+path = "openai_bootstrap"
 
 [dev-dependencies.tokio]
 version = "1.25"

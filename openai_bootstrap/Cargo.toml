@@ -1,5 +1,5 @@
 [package]
-name = "openai_utils"
+name = "openai_bootstrap"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

@@ -22,8 +22,8 @@ convert_case = "0.6"
 version = "0.11"
 features = [ "blocking", "json" ]
 
-[dependencies.openai_utils]
-path = "../openai_utils"
+[dependencies.openai_bootstrap]
+path = "../openai_bootstrap"
 
 [dependencies.serde]
 version = "1.0"
