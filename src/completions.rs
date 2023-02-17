@@ -5,7 +5,7 @@ use serde::{ Deserialize, Serialize };
 use super::{ models::ModelID, Usage };
 use std::collections::HashMap;
 use reqwest::Client;
-use openai_utils::{ BASE_URL, authorization };
+use openai_bootstrap::{ BASE_URL, authorization };
 
 #[derive(Deserialize)]
 pub struct Completion {

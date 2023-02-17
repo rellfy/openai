@@ -1,9 +1,9 @@
+use convert_case::{Case, Casing};
+use openai_bootstrap::{authorization, BASE_URL};
 use proc_macro::TokenStream;
-use quote::{ quote, format_ident };
+use quote::{format_ident, quote};
 use reqwest::blocking::Client;
-use openai_utils::{ BASE_URL, authorization };
 use serde::Deserialize;
-use convert_case::{ Case, Casing };
 
 #[derive(Deserialize)]
 struct Models {
@@ -20,7 +20,10 @@ pub fn generate_model_id_enum(_input: TokenStream) -> TokenStream {
     let client = Client::new();
 
     let response: Models = authorization!(client.get(format!("{BASE_URL}/models")))
-        .send().unwrap().json().unwrap();
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
 
     let mut model_id_idents = Vec::new();
     let mut model_ids = Vec::new();
@@ -28,10 +31,7 @@ pub fn generate_model_id_enum(_input: TokenStream) -> TokenStream {
     let mut index: u32 = 0;
 
     for model in response.data {
-        if model.id.contains(':')
-           || model.id.contains('.')
-           || model.id.contains("deprecated")
-        {
+        if model.id.contains(':') || model.id.contains('.') || model.id.contains("deprecated") {
             continue;
         }
 

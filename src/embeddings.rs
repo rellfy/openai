@@ -5,7 +5,7 @@
 use serde::{ Deserialize, Serialize };
 use reqwest::Client;
 use super::{ models::ModelID, Usage };
-use openai_utils::{ BASE_URL, authorization };
+use openai_bootstrap::{ BASE_URL, authorization };
 
 #[derive(Serialize)]
 struct CreateEmbeddingsRequestBody<'a> {

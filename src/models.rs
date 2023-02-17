@@ -5,7 +5,7 @@
 use serde::Deserialize;
 use reqwest::Client;
 use openai_proc_macros::generate_model_id_enum;
-use openai_utils::{ BASE_URL, authorization };
+use openai_bootstrap::{ BASE_URL, authorization };
 
 #[derive(Deserialize)]
 pub struct Model {
