@@ -2,10 +2,10 @@
 //!
 //! Related guide: [Embeddings](https://beta.openai.com/docs/guides/embeddings)
 
-use serde::{ Deserialize, Serialize };
+use super::{handle_api, models::ModelID, ModifiedApiResponse, Usage};
+use openai_utils::{authorization, BASE_URL};
 use reqwest::Client;
-use super::{ models::ModelID, Usage };
-use openai_utils::{ BASE_URL, authorization };
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
 struct CreateEmbeddingsRequestBody<'a> {
@@ -36,12 +36,12 @@ impl Embeddings {
     ///   Each input must not exceed 8192 tokens in length.
     /// * `user` - A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     ///   [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
-    pub async fn new(model: ModelID, input: Vec<&str>, user: &str) -> Result<Self, reqwest::Error> {
+    pub async fn new(model: ModelID, input: Vec<&str>, user: &str) -> ModifiedApiResponse<Self> {
         let client = Client::builder().build()?;
+        let request = authorization!(client.post(format!("{BASE_URL}/embeddings")))
+            .json(&CreateEmbeddingsRequestBody { model, input, user });
 
-        authorization!(client.post(format!("{BASE_URL}/embeddings")))
-            .json(&CreateEmbeddingsRequestBody { model, input, user })
-            .send().await?.json().await
+        handle_api(request).await
     }
 }
 
@@ -52,14 +52,13 @@ pub struct Embedding {
 }
 
 impl Embedding {
-    pub async fn new(model: ModelID, input: &str, user: &str) -> Result<Self, reqwest::Error> {
-        let embeddings = Embeddings::new(model, vec![input], user);
+    pub async fn new(model: ModelID, input: &str, user: &str) -> ModifiedApiResponse<Self> {
+        let response = Embeddings::new(model, vec![input], user).await?;
 
-        Ok(
-            embeddings
-                .await.expect("should create embeddings")
-                .data.swap_remove(0)
-        )
+        match response {
+            Ok(mut embeddings) => Ok(Ok(embeddings.data.swap_remove(0))),
+            Err(error) => Ok(Err(error)),
+        }
     }
 }
 
@@ -76,7 +75,10 @@ mod tests {
             ModelID::TextEmbeddingAda002,
             vec!["The food was delicious and the waiter..."],
             "",
-        ).await.unwrap();
+        )
+        .await
+        .unwrap()
+        .unwrap();
 
         assert!(!embeddings.data.first().unwrap().vec.is_empty())
     }
@@ -89,7 +91,10 @@ mod tests {
             ModelID::TextEmbeddingAda002,
             "The food was delicious and the waiter...",
             "",
-        ).await.unwrap();
+        )
+        .await
+        .unwrap()
+        .unwrap();
 
         assert!(!embedding.vec.is_empty())
     }

@@ -2,10 +2,11 @@
 //! You can refer to the [Models](https://beta.openai.com/docs/models)
 //! documentation to understand what models are available and the differences between them.
 
-use serde::Deserialize;
-use reqwest::Client;
+use super::{handle_api, ModifiedApiResponse};
 use openai_proc_macros::generate_model_id_enum;
-use openai_utils::{ BASE_URL, authorization };
+use openai_utils::{authorization, BASE_URL};
+use reqwest::Client;
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct Model {
@@ -20,11 +21,11 @@ pub struct Model {
 impl Model {
     //! Retrieves a model instance,
     //! providing basic information about the model such as the owner and permissioning.
-    pub async fn new(id: ModelID) -> Result<Model, reqwest::Error> {
+    pub async fn new(id: ModelID) -> ModifiedApiResponse<Self> {
         let client = Client::builder().build()?;
+        let request = authorization!(client.get(format!("{BASE_URL}/models/{id}")));
 
-        authorization!(client.get(format!("{BASE_URL}/models/{id}")))
-            .send().await?.json().await
+        handle_api(request).await
     }
 }
 
@@ -96,21 +97,21 @@ mod tests {
     async fn model() {
         dotenv().ok();
 
-        let model = Model::new(ModelID::TextDavinci003).await.unwrap();
+        let model = Model::new(ModelID::TextDavinci003).await.unwrap().unwrap();
 
-        assert_eq!(
-            model.id,
-            ModelID::TextDavinci003,
-        )
+        assert_eq!(model.id, ModelID::TextDavinci003,)
     }
 
     #[tokio::test]
     async fn custom_model() {
         dotenv().ok();
 
-        let model = Model::new(
-            ModelID::Custom("davinci:ft-personal-2022-12-12-04-49-51".to_string())
-        ).await.unwrap();
+        let model = Model::new(ModelID::Custom(
+            "davinci:ft-personal-2022-12-12-04-49-51".to_string(),
+        ))
+        .await
+        .unwrap()
+        .unwrap();
 
         assert_eq!(
             model.id,

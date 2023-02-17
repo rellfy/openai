@@ -1,11 +1,11 @@
 //! Given a prompt, the model will return one or more predicted completions,
 //! and can also return the probabilities of alternative tokens at each position.
 
-use serde::{ Deserialize, Serialize };
-use super::{ models::ModelID, Usage };
-use std::collections::HashMap;
+use super::{handle_api, models::ModelID, ModifiedApiResponse, Usage};
+use openai_utils::{authorization, BASE_URL};
 use reqwest::Client;
-use openai_utils::{ BASE_URL, authorization };
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Deserialize)]
 pub struct Completion {
@@ -18,7 +18,7 @@ pub struct Completion {
 
 impl Completion {
     /// Creates a completion for the provided prompt and parameters
-    pub async fn new(body: &CreateCompletionRequestBody<'_>) -> Result<Self, reqwest::Error> {
+    pub async fn new(body: &CreateCompletionRequestBody<'_>) -> ModifiedApiResponse<Self> {
         if let Some(enabled) = body.stream {
             if enabled {
                 todo!("the `stream` field is not yet implemented");
@@ -26,10 +26,9 @@ impl Completion {
         }
 
         let client = Client::builder().build()?;
+        let request = authorization!(client.post(format!("{BASE_URL}/completions"))).json(body);
 
-        authorization!(client.post(format!("{BASE_URL}/completions")))
-            .json(body)
-            .send().await?.json().await
+        handle_api(request).await
     }
 }
 
@@ -154,15 +153,21 @@ mod tests {
     #[tokio::test]
     async fn completion() {
         dotenv().ok();
-        
+
         let completion = Completion::new(&CreateCompletionRequestBody {
             model: ModelID::TextDavinci003,
             prompt: "Say this is a test",
             max_tokens: Some(7),
             temperature: Some(0.0),
             ..Default::default()
-        }).await.unwrap();
+        })
+        .await
+        .unwrap()
+        .unwrap();
 
-        assert_eq!(completion.choices.first().unwrap().text, "\n\nThis is indeed a test")
+        assert_eq!(
+            completion.choices.first().unwrap().text,
+            "\n\nThis is indeed a test"
+        );
     }
 }
