@@ -3,7 +3,7 @@
 //! documentation to understand what models are available and the differences between them.
 
 use super::{handle_api, ModifiedApiResponse};
-use openai_bootstrap::{authorization, BASE_URL};
+use openai_bootstrap::BASE_URL;
 use openai_proc_macros::generate_model_id_enum;
 use reqwest::Client;
 use serde::Deserialize;
@@ -23,7 +23,7 @@ impl Model {
     //! providing basic information about the model such as the owner and permissioning.
     pub async fn new(id: ModelID) -> ModifiedApiResponse<Self> {
         let client = Client::builder().build()?;
-        let request = authorization!(client.get(format!("{BASE_URL}/models/{id}")));
+        let request = client.get(format!("{BASE_URL}/models/{id}"));
 
         handle_api(request).await
     }

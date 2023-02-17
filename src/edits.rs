@@ -1,7 +1,7 @@
 //! Given a prompt and an instruction, the model will return an edited version of the prompt.
 
 use super::{handle_api, models::ModelID, ModifiedApiResponse, OpenAiError, Usage};
-use openai_bootstrap::{authorization, BASE_URL};
+use openai_bootstrap::BASE_URL;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +18,7 @@ pub struct Edit {
 impl Edit {
     pub async fn new(body: &CreateEditRequestBody<'_>) -> ModifiedApiResponse<Self> {
         let client = Client::builder().build()?;
-        let request = authorization!(client.post(format!("{BASE_URL}/edits"))).json(body);
+        let request = client.post(format!("{BASE_URL}/edits")).json(body);
         let response: Result<Self, OpenAiError> = handle_api(request).await?;
 
         match response {

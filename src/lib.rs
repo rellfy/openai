@@ -1,5 +1,6 @@
 use reqwest::RequestBuilder;
 use serde::{de::DeserializeOwned, Deserialize};
+use openai_bootstrap::authorization;
 
 pub mod completions;
 pub mod edits;
@@ -48,7 +49,7 @@ async fn handle_api<T>(request: RequestBuilder) -> ModifiedApiResponse<T>
 where
     T: DeserializeOwned,
 {
-    let api_response: ApiResponse<T> = request.send().await?.json().await?;
+    let api_response: ApiResponse<T> = authorization!(request).send().await?.json().await?;
 
     match api_response {
         ApiResponse::Ok(t) => Ok(Ok(t)),

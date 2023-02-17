@@ -3,7 +3,7 @@
 //! Related guide: [Embeddings](https://beta.openai.com/docs/guides/embeddings)
 
 use super::{handle_api, models::ModelID, ModifiedApiResponse, Usage};
-use openai_bootstrap::{authorization, BASE_URL};
+use openai_bootstrap::BASE_URL;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -38,7 +38,8 @@ impl Embeddings {
     ///   [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
     pub async fn new(model: ModelID, input: Vec<&str>, user: &str) -> ModifiedApiResponse<Self> {
         let client = Client::builder().build()?;
-        let request = authorization!(client.post(format!("{BASE_URL}/embeddings")))
+        let request = client
+            .post(format!("{BASE_URL}/embeddings"))
             .json(&CreateEmbeddingsRequestBody { model, input, user });
 
         handle_api(request).await
