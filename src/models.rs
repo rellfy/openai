@@ -3,8 +3,8 @@
 //! documentation to understand what models are available and the differences between them.
 
 use super::{handle_api, ModifiedApiResponse};
+use openai_bootstrap::{authorization, BASE_URL};
 use openai_proc_macros::generate_model_id_enum;
-use openai_bootstrap::{ BASE_URL, authorization };
 use reqwest::Client;
 use serde::Deserialize;
 
@@ -99,10 +99,7 @@ mod tests {
 
         let model = Model::new(ModelID::TextDavinci003).await.unwrap().unwrap();
 
-        assert_eq!(
-            model.id,
-            ModelID::TextDavinci003,
-        );
+        assert_eq!(model.id, ModelID::TextDavinci003,);
     }
 
     #[tokio::test]

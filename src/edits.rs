@@ -1,7 +1,7 @@
 //! Given a prompt and an instruction, the model will return an edited version of the prompt.
 
 use super::{handle_api, models::ModelID, ModifiedApiResponse, OpenAiError, Usage};
-use openai_bootstrap::{ BASE_URL, authorization };
+use openai_bootstrap::{authorization, BASE_URL};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
