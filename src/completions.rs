@@ -163,6 +163,6 @@ mod tests {
             ..Default::default()
         }).await.unwrap();
 
-        assert_eq!(completion.choices.first().unwrap().text, "\n\nThis is indeed a test")
+        assert_eq!(completion.choices.first().unwrap().text, "\n\nThis is indeed a test");
     }
 }

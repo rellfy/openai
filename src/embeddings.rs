@@ -2,10 +2,10 @@
 //!
 //! Related guide: [Embeddings](https://beta.openai.com/docs/guides/embeddings)
 
-use serde::{ Deserialize, Serialize };
+use super::{models::ModelID, Usage};
+use openai_bootstrap::{authorization, BASE_URL};
 use reqwest::Client;
-use super::{ models::ModelID, Usage };
-use openai_bootstrap::{ BASE_URL, authorization };
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
 struct CreateEmbeddingsRequestBody<'a> {
@@ -41,25 +41,55 @@ impl Embeddings {
 
         authorization!(client.post(format!("{BASE_URL}/embeddings")))
             .json(&CreateEmbeddingsRequestBody { model, input, user })
-            .send().await?.json().await
+            .send()
+            .await?
+            .json()
+            .await
+    }
+
+    pub fn distances(&self) -> Vec<f64> {
+        let mut distances = Vec::new();
+        let mut last_embedding: Option<&Embedding> = None;
+
+        for embedding in &self.data {
+            if let Some(other) = last_embedding {
+                distances.push(embedding.distance(other));
+            }
+
+            last_embedding = Some(embedding);
+        }
+
+        distances
     }
 }
 
 #[derive(Deserialize)]
 pub struct Embedding {
     #[serde(rename = "embedding")]
-    pub vec: Vec<f32>,
+    pub vec: Vec<f64>,
 }
 
 impl Embedding {
     pub async fn new(model: ModelID, input: &str, user: &str) -> Result<Self, reqwest::Error> {
         let embeddings = Embeddings::new(model, vec![input], user);
 
-        Ok(
-            embeddings
-                .await.expect("should create embeddings")
-                .data.swap_remove(0)
-        )
+        Ok(embeddings
+            .await
+            .expect("should create embeddings")
+            .data
+            .swap_remove(0))
+    }
+
+    pub fn distance(&self, other: &Self) -> f64 {
+        let dot_product: f64 = self
+            .vec
+            .iter()
+            .zip(other.vec.iter())
+            .map(|(x, y)| x * y)
+            .sum();
+        let product_of_lengths = (self.vec.len() * other.vec.len()) as f64;
+
+        dot_product / product_of_lengths
     }
 }
 
@@ -76,9 +106,11 @@ mod tests {
             ModelID::TextEmbeddingAda002,
             vec!["The food was delicious and the waiter..."],
             "",
-        ).await.unwrap();
+        )
+        .await
+        .unwrap();
 
-        assert!(!embeddings.data.first().unwrap().vec.is_empty())
+        assert!(!embeddings.data.first().unwrap().vec.is_empty());
     }
 
     #[tokio::test]
@@ -89,8 +121,54 @@ mod tests {
             ModelID::TextEmbeddingAda002,
             "The food was delicious and the waiter...",
             "",
-        ).await.unwrap();
+        )
+        .await
+        .unwrap();
 
-        assert!(!embedding.vec.is_empty())
+        assert!(!embedding.vec.is_empty());
+    }
+
+    #[test]
+    fn right_angle() {
+        let embeddings = Embeddings {
+            data: vec![
+                Embedding {
+                    vec: vec![1.0, 0.0, 0.0],
+                },
+                Embedding {
+                    vec: vec![0.0, 1.0, 0.0],
+                },
+            ],
+            model: ModelID::TextEmbeddingAda002,
+            usage: Usage {
+                prompt_tokens: 0,
+                completion_tokens: Some(0),
+                total_tokens: 0,
+            },
+        };
+
+        assert_eq!(embeddings.distances()[0], 0.0);
+    }
+
+    #[test]
+    fn non_right_angle() {
+        let embeddings = Embeddings {
+            data: vec![
+                Embedding {
+                    vec: vec![1.0, 1.0, 0.0],
+                },
+                Embedding {
+                    vec: vec![0.0, 1.0, 0.0],
+                },
+            ],
+            model: ModelID::TextEmbeddingAda002,
+            usage: Usage {
+                prompt_tokens: 0,
+                completion_tokens: Some(0),
+                total_tokens: 0,
+            },
+        };
+
+        assert_ne!(embeddings.distances()[0], 0.0);
     }
 }
