@@ -2,9 +2,8 @@
 //!
 //! Related guide: [Embeddings](https://beta.openai.com/docs/guides/embeddings)
 
-use super::{handle_api, models::ModelID, ModifiedApiResponse, Usage};
-use openai_bootstrap::BASE_URL;
-use reqwest::Client;
+use super::{models::ModelID, openai_request, ModifiedApiResponse, Usage};
+use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
@@ -37,12 +36,12 @@ impl Embeddings {
     /// * `user` - A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     ///   [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
     pub async fn new(model: ModelID, input: Vec<&str>, user: &str) -> ModifiedApiResponse<Self> {
-        let client = Client::builder().build()?;
-        let request = client
-            .post(format!("{BASE_URL}/embeddings"))
-            .json(&CreateEmbeddingsRequestBody { model, input, user });
-
-        handle_api(request).await
+        openai_request(
+            Method::POST,
+            "embeddings",
+            &CreateEmbeddingsRequestBody { model, input, user },
+        )
+        .await
     }
 
     pub fn distances(&self) -> Vec<f64> {

@@ -1,4 +1,4 @@
-pub const BASE_URL: &str = "https://api.openai.com/v1";
+pub const BASE_URL: &str = "https://api.openai.com/v1/";
 
 #[macro_export]
 macro_rules! authorization {

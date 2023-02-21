@@ -1,6 +1,6 @@
-use reqwest::RequestBuilder;
-use serde::{de::DeserializeOwned, Deserialize};
-use openai_bootstrap::authorization;
+use openai_bootstrap::{authorization, BASE_URL};
+use reqwest::{Client, Method};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 pub mod completions;
 pub mod edits;
@@ -45,10 +45,17 @@ enum ApiResponse<T> {
 
 type ModifiedApiResponse<T> = Result<Result<T, OpenAiError>, reqwest::Error>;
 
-async fn handle_api<T>(request: RequestBuilder) -> ModifiedApiResponse<T>
+/// `body` must be set. If there should be no body, set to `""`.
+async fn openai_request<J, T>(method: Method, route: &str, body: &J) -> ModifiedApiResponse<T>
 where
+    J: Serialize + ?Sized,
     T: DeserializeOwned,
 {
+    let client = Client::new();
+    let request = client
+        .request(method, BASE_URL.to_owned() + route)
+        .json(body);
+
     let api_response: ApiResponse<T> = authorization!(request).send().await?.json().await?;
 
     match api_response {

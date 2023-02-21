@@ -1,9 +1,8 @@
 //! Given a prompt, the model will return one or more predicted completions,
 //! and can also return the probabilities of alternative tokens at each position.
 
-use super::{handle_api, models::ModelID, ModifiedApiResponse, Usage};
-use openai_bootstrap::BASE_URL;
-use reqwest::Client;
+use super::{models::ModelID, openai_request, ModifiedApiResponse, Usage};
+use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -25,10 +24,7 @@ impl Completion {
             }
         }
 
-        let client = Client::builder().build()?;
-        let request = client.post(format!("{BASE_URL}/completions")).json(body);
-
-        handle_api(request).await
+        openai_request(Method::POST, "completions", body).await
     }
 }
 

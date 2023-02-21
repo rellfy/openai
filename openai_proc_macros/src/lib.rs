@@ -19,7 +19,7 @@ struct Model {
 pub fn generate_model_id_enum(_input: TokenStream) -> TokenStream {
     let client = Client::new();
 
-    let response: Models = authorization!(client.get(format!("{BASE_URL}/models")))
+    let response: Models = authorization!(client.get(format!("{BASE_URL}models")))
         .send()
         .unwrap()
         .json()
