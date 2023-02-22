@@ -43,10 +43,10 @@ enum ApiResponse<T> {
     Err(ErrorResponse),
 }
 
-type ModifiedApiResponse<T> = Result<Result<T, OpenAiError>, reqwest::Error>;
+type ApiResponseOrError<T> = Result<Result<T, OpenAiError>, reqwest::Error>;
 
 /// `body` must be set. If there should be no body, set to `""`.
-async fn openai_request<J, T>(method: Method, route: &str, body: &J) -> ModifiedApiResponse<T>
+async fn openai_request<J, T>(method: Method, route: &str, body: &J) -> ApiResponseOrError<T>
 where
     J: Serialize + ?Sized,
     T: DeserializeOwned,

@@ -2,7 +2,7 @@
 //!
 //! Related guide: [Embeddings](https://beta.openai.com/docs/guides/embeddings)
 
-use super::{models::ModelID, openai_request, ModifiedApiResponse, Usage};
+use super::{models::ModelID, openai_request, ApiResponseOrError, Usage};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
@@ -35,7 +35,7 @@ impl Embeddings {
     ///   Each input must not exceed 8192 tokens in length.
     /// * `user` - A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     ///   [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
-    pub async fn new(model: ModelID, input: Vec<&str>, user: &str) -> ModifiedApiResponse<Self> {
+    pub async fn new(model: ModelID, input: Vec<&str>, user: &str) -> ApiResponseOrError<Self> {
         openai_request(
             Method::POST,
             "embeddings",
@@ -67,7 +67,7 @@ pub struct Embedding {
 }
 
 impl Embedding {
-    pub async fn new(model: ModelID, input: &str, user: &str) -> ModifiedApiResponse<Self> {
+    pub async fn new(model: ModelID, input: &str, user: &str) -> ApiResponseOrError<Self> {
         let response = Embeddings::new(model, vec![input], user).await?;
 
         match response {

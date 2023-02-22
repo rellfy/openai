@@ -1,7 +1,7 @@
 //! Given a prompt, the model will return one or more predicted completions,
 //! and can also return the probabilities of alternative tokens at each position.
 
-use super::{models::ModelID, openai_request, ModifiedApiResponse, Usage};
+use super::{models::ModelID, openai_request, ApiResponseOrError, Usage};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -17,7 +17,7 @@ pub struct Completion {
 
 impl Completion {
     /// Creates a completion for the provided prompt and parameters
-    pub async fn new(body: &CreateCompletionRequestBody<'_>) -> ModifiedApiResponse<Self> {
+    pub async fn new(body: &CreateCompletionRequestBody<'_>) -> ApiResponseOrError<Self> {
         if let Some(enabled) = body.stream {
             if enabled {
                 todo!("the `stream` field is not yet implemented");
