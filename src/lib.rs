@@ -1,4 +1,4 @@
-use openai_bootstrap::{authorization, BASE_URL};
+use openai_bootstrap::{authorization, ApiResponse, OpenAiError, BASE_URL};
 use reqwest::{Client, Method};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -14,35 +14,6 @@ pub struct Usage {
     pub total_tokens: u32,
 }
 
-#[derive(Deserialize)]
-struct ErrorResponse {
-    error: OpenAiError,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct OpenAiError {
-    pub message: String,
-    #[serde(rename = "type")]
-    pub error_type: String,
-    pub param: Option<String>,
-    pub code: Option<String>,
-}
-
-impl std::fmt::Display for OpenAiError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
-impl std::error::Error for OpenAiError {}
-
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum ApiResponse<T> {
-    Ok(T),
-    Err(ErrorResponse),
-}
-
 type ApiResponseOrError<T> = Result<Result<T, OpenAiError>, reqwest::Error>;
 
 /// `body` must be set. If there should be no body, set to `""`.
@@ -55,7 +26,6 @@ where
     let request = client
         .request(method, BASE_URL.to_owned() + route)
         .json(body);
-
     let api_response: ApiResponse<T> = authorization!(request).send().await?.json().await?;
 
     match api_response {
