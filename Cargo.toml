@@ -4,6 +4,7 @@ version = "1.0.0-alpha.3"
 authors.workspace = true
 edition.workspace = true
 description = "An unofficial Rust library for the OpenAI API."
+documentation.workspace = true
 repository.workspace = true
 license.workspace = true
 keywords = ["ai", "high-level", "machine-learning", "openai", "library"]
@@ -43,6 +44,7 @@ exclude = ["examples"]
 
 [workspace.package]
 authors = ["valentinegb"]
+documentation = "https://valentinegb.github.io/openai/"
 edition = "2021"
 repository = "https://github.com/valentinegb/openai"
 license = "AGPL-3.0-only"

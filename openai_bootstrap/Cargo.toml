@@ -4,6 +4,7 @@ version = "1.0.0-alpha.3"
 authors.workspace = true
 edition.workspace = true
 description = "Bootstrapping crate for the openai crate."
+documentation.workspace = true
 repository.workspace = true
 license.workspace = true
 
