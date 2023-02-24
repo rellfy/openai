@@ -12,12 +12,9 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
-    
     - uses: actions/cache@v3
       with:
         path: |
@@ -27,9 +24,25 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        
     - name: Build
       run: cargo build --verbose
-      
     - name: Run tests
       run: cargo test --verbose
+    - name: Build docs
+      run: cargo doc --verbose
+    - uses: actions/upload-pages-artifact@v1
+      with:
+        path: target/doc
+  deploy:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1

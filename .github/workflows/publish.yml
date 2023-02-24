@@ -24,12 +24,12 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: Publish `openai_bootstrap`
-      run: cargo publish --token ${CRATES_TOKEN} -p openai_bootstrap
-      if: success() || failure()
-    - name: Publish `openai_proc_macros`
-      run: cargo publish --token ${CRATES_TOKEN} -p openai_proc_macros
-      if: success() || failure()
-    - name: Publish `openai`
-      run: cargo publish --token ${CRATES_TOKEN} -p openai
-      if: success() || failure()
+      - name: Publish `openai_bootstrap`
+        continue-on-error: true
+        run: cargo publish --token ${CRATES_TOKEN} -p openai_bootstrap
+      - name: Publish `openai_proc_macros`
+        continue-on-error: true
+        run: cargo publish --token ${CRATES_TOKEN} -p openai_proc_macros
+      - name: Publish `openai`
+        continue-on-error: true
+        run: cargo publish --token ${CRATES_TOKEN} -p openai
