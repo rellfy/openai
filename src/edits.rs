@@ -1,7 +1,6 @@
 //! Given a prompt and an instruction, the model will return an edited version of the prompt.
 
-use super::{models::ModelID, openai_request, ApiResponseOrError, OpenAiError, Usage};
-use reqwest::Method;
+use super::{models::ModelID, openai_post, ApiResponseOrError, OpenAiError, Usage};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
@@ -16,8 +15,7 @@ pub struct Edit {
 
 impl Edit {
     pub async fn new(body: &CreateEditRequestBody<'_>) -> ApiResponseOrError<Self> {
-        let response: Result<Self, OpenAiError> =
-            openai_request(Method::POST, "edits", body).await?;
+        let response: Result<Self, OpenAiError> = openai_post("edits", body).await?;
 
         match response {
             Ok(mut edit) => {

@@ -2,8 +2,7 @@
 //!
 //! Related guide: [Embeddings](https://beta.openai.com/docs/guides/embeddings)
 
-use super::{models::ModelID, openai_request, ApiResponseOrError, Usage};
-use reqwest::Method;
+use super::{models::ModelID, openai_post, ApiResponseOrError, Usage};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
@@ -36,8 +35,7 @@ impl Embeddings {
     /// * `user` - A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     ///   [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
     pub async fn new(model: ModelID, input: Vec<&str>, user: &str) -> ApiResponseOrError<Self> {
-        openai_request(
-            Method::POST,
+        openai_post(
             "embeddings",
             &CreateEmbeddingsRequestBody { model, input, user },
         )

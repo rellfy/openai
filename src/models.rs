@@ -2,9 +2,8 @@
 //! You can refer to the [Models](https://beta.openai.com/docs/models)
 //! documentation to understand what models are available and the differences between them.
 
-use super::{openai_request, ApiResponseOrError};
+use super::{openai_get, ApiResponseOrError};
 use openai_proc_macros::generate_model_id_enum;
-use reqwest::Method;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -21,7 +20,7 @@ impl Model {
     //! Retrieves a model instance,
     //! providing basic information about the model such as the owner and permissioning.
     pub async fn new(id: ModelID) -> ApiResponseOrError<Self> {
-        openai_request(Method::GET, &format!("models/{id}"), "").await
+        openai_get(&format!("models/{id}")).await
     }
 }
 
