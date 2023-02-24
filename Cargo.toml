@@ -1,6 +1,6 @@
 [package]
 name = "openai"
-version.workspace = true
+version = "1.0.0-alpha.3"
 authors.workspace = true
 edition.workspace = true
 description = "An unofficial Rust library for the OpenAI API."
@@ -42,7 +42,6 @@ dotenvy = "0.15"
 exclude = ["examples"]
 
 [workspace.package]
-version = "1.0.0-alpha.3"
 authors = ["valentinegb"]
 edition = "2021"
 repository = "https://github.com/valentinegb/openai"
