@@ -1,9 +1,8 @@
 //! Given a prompt and an instruction, the model will return an edited version of the prompt.
 
-use serde::{ Deserialize, Serialize };
-use super::{ Usage, models::ModelID };
-use reqwest::Client;
-use openai_bootstrap::{ BASE_URL, authorization };
+use super::{models::ModelID, openai_request, ApiResponseOrError, OpenAiError, Usage};
+use reqwest::Method;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 pub struct Edit {
@@ -16,18 +15,20 @@ pub struct Edit {
 }
 
 impl Edit {
-    pub async fn new(body: &CreateEditRequestBody<'_>) -> Result<Self, reqwest::Error> {
-        let client = Client::builder().build()?;
+    pub async fn new(body: &CreateEditRequestBody<'_>) -> ApiResponseOrError<Self> {
+        let response: Result<Self, OpenAiError> =
+            openai_request(Method::POST, "edits", body).await?;
 
-        let mut edit: Self = authorization!(client.post(format!("{BASE_URL}/edits")))
-            .json(body)
-            .send().await?.json().await?;
+        match response {
+            Ok(mut edit) => {
+                for choice in &edit.choices_bad {
+                    edit.choices.push(choice.text.clone());
+                }
 
-        for choice in &edit.choices_bad {
-            edit.choices.push(choice.text.clone());
+                Ok(Ok(edit))
+            }
+            Err(_) => Ok(response),
         }
-
-        Ok(edit)
     }
 }
 
@@ -80,8 +81,14 @@ mod tests {
             instruction: "Fix the spelling mistakes",
             temperature: Some(0.0),
             ..Default::default()
-        }).await.unwrap();
+        })
+        .await
+        .unwrap()
+        .unwrap();
 
-        assert_eq!(edit.choices.first().unwrap(), "What day of the week is it?\n");
+        assert_eq!(
+            edit.choices.first().unwrap(),
+            "What day of the week is it?\n"
+        );
     }
 }

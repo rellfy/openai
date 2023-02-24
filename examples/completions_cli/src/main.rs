@@ -1,8 +1,8 @@
+use dotenvy::dotenv;
 use openai::{
-    completions::{ Completion, CreateCompletionRequestBody },
+    completions::{Completion, CreateCompletionRequestBody},
     models::ModelID,
 };
-use dotenvy::dotenv;
 use std::io::stdin;
 
 #[tokio::main]
@@ -22,7 +22,10 @@ async fn main() {
             prompt: &prompt,
             max_tokens: Some(1024),
             ..Default::default()
-        }).await.unwrap();
+        })
+        .await
+        .unwrap()
+        .unwrap();
 
         let response = &completion.choices.first().unwrap().text;
 

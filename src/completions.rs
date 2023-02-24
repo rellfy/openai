@@ -1,11 +1,10 @@
 //! Given a prompt, the model will return one or more predicted completions,
 //! and can also return the probabilities of alternative tokens at each position.
 
-use serde::{ Deserialize, Serialize };
-use super::{ models::ModelID, Usage };
+use super::{models::ModelID, openai_request, ApiResponseOrError, Usage};
+use reqwest::Method;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use reqwest::Client;
-use openai_bootstrap::{ BASE_URL, authorization };
 
 #[derive(Deserialize)]
 pub struct Completion {
@@ -18,18 +17,14 @@ pub struct Completion {
 
 impl Completion {
     /// Creates a completion for the provided prompt and parameters
-    pub async fn new(body: &CreateCompletionRequestBody<'_>) -> Result<Self, reqwest::Error> {
+    pub async fn new(body: &CreateCompletionRequestBody<'_>) -> ApiResponseOrError<Self> {
         if let Some(enabled) = body.stream {
             if enabled {
                 todo!("the `stream` field is not yet implemented");
             }
         }
 
-        let client = Client::builder().build()?;
-
-        authorization!(client.post(format!("{BASE_URL}/completions")))
-            .json(body)
-            .send().await?.json().await
+        openai_request(Method::POST, "completions", body).await
     }
 }
 
@@ -154,15 +149,21 @@ mod tests {
     #[tokio::test]
     async fn completion() {
         dotenv().ok();
-        
+
         let completion = Completion::new(&CreateCompletionRequestBody {
             model: ModelID::TextDavinci003,
             prompt: "Say this is a test",
             max_tokens: Some(7),
             temperature: Some(0.0),
             ..Default::default()
-        }).await.unwrap();
+        })
+        .await
+        .unwrap()
+        .unwrap();
 
-        assert_eq!(completion.choices.first().unwrap().text, "\n\nThis is indeed a test");
+        assert_eq!(
+            completion.choices.first().unwrap().text,
+            "\n\nThis is indeed a test"
+        );
     }
 }

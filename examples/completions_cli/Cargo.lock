@@ -429,11 +429,18 @@ name = "openai"
 version = "1.0.0-alpha.2"
 dependencies = [
  "dotenvy",
+ "openai_bootstrap",
  "openai_proc_macros",
- "openai_utils",
  "reqwest",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "openai_bootstrap"
+version = "1.0.0-alpha.2"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -442,16 +449,12 @@ version = "1.0.0-alpha.2"
 dependencies = [
  "convert_case",
  "dotenvy",
- "openai_utils",
+ "openai_bootstrap",
  "quote",
  "reqwest",
  "serde",
  "serde_json",
 ]
-
-[[package]]
-name = "openai_utils"
-version = "1.0.0-alpha.2"
 
 [[package]]
 name = "openssl"

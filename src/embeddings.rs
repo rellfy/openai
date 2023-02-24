@@ -2,9 +2,8 @@
 //!
 //! Related guide: [Embeddings](https://beta.openai.com/docs/guides/embeddings)
 
-use super::{models::ModelID, Usage};
-use openai_bootstrap::{authorization, BASE_URL};
-use reqwest::Client;
+use super::{models::ModelID, openai_request, ApiResponseOrError, Usage};
+use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
@@ -36,15 +35,13 @@ impl Embeddings {
     ///   Each input must not exceed 8192 tokens in length.
     /// * `user` - A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     ///   [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
-    pub async fn new(model: ModelID, input: Vec<&str>, user: &str) -> Result<Self, reqwest::Error> {
-        let client = Client::builder().build()?;
-
-        authorization!(client.post(format!("{BASE_URL}/embeddings")))
-            .json(&CreateEmbeddingsRequestBody { model, input, user })
-            .send()
-            .await?
-            .json()
-            .await
+    pub async fn new(model: ModelID, input: Vec<&str>, user: &str) -> ApiResponseOrError<Self> {
+        openai_request(
+            Method::POST,
+            "embeddings",
+            &CreateEmbeddingsRequestBody { model, input, user },
+        )
+        .await
     }
 
     pub fn distances(&self) -> Vec<f64> {
@@ -70,14 +67,13 @@ pub struct Embedding {
 }
 
 impl Embedding {
-    pub async fn new(model: ModelID, input: &str, user: &str) -> Result<Self, reqwest::Error> {
-        let embeddings = Embeddings::new(model, vec![input], user);
+    pub async fn new(model: ModelID, input: &str, user: &str) -> ApiResponseOrError<Self> {
+        let response = Embeddings::new(model, vec![input], user).await?;
 
-        Ok(embeddings
-            .await
-            .expect("should create embeddings")
-            .data
-            .swap_remove(0))
+        match response {
+            Ok(mut embeddings) => Ok(Ok(embeddings.data.swap_remove(0))),
+            Err(error) => Ok(Err(error)),
+        }
     }
 
     pub fn distance(&self, other: &Self) -> f64 {
@@ -108,6 +104,7 @@ mod tests {
             "",
         )
         .await
+        .unwrap()
         .unwrap();
 
         assert!(!embeddings.data.first().unwrap().vec.is_empty());
@@ -123,6 +120,7 @@ mod tests {
             "",
         )
         .await
+        .unwrap()
         .unwrap();
 
         assert!(!embedding.vec.is_empty());
