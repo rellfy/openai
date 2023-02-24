@@ -1,6 +1,6 @@
 [package]
 name = "openai"
-version = "1.0.0-alpha.3"
+version = "1.0.0-alpha.4"
 authors.workspace = true
 edition.workspace = true
 description = "An unofficial Rust library for the OpenAI API."
@@ -26,11 +26,11 @@ features = ["derive"]
 
 [dependencies.openai_proc_macros]
 path = "openai_proc_macros"
-version = "1.0.0-alpha.3"
+version = "1.0.0-alpha.4"
 
 [dependencies.openai_bootstrap]
 path = "openai_bootstrap"
-version = "1.0.0-alpha.3"
+version = "1.0.0-alpha.4"
 
 [dev-dependencies.tokio]
 version = "1.25"
