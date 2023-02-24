@@ -3,8 +3,10 @@ name = "openai"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+description = "An unofficial Rust library for the OpenAI API."
 repository.workspace = true
 license.workspace = true
+keywords = ["ai", "high-level", "machine-learning"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
