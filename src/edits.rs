@@ -1,6 +1,7 @@
 //! Given a prompt and an instruction, the model will return an edited version of the prompt.
 
 use super::{models::ModelID, openai_post, ApiResponseOrError, OpenAiError, Usage};
+use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
@@ -14,7 +15,7 @@ pub struct Edit {
 }
 
 impl Edit {
-    pub async fn new(body: &CreateEditRequestBody<'_>) -> ApiResponseOrError<Self> {
+    async fn new(body: &CreateEditRequestBody<'_>) -> ApiResponseOrError<Self> {
         let response: Result<Self, OpenAiError> = openai_post("edits", body).await?;
 
         match response {
@@ -28,6 +29,10 @@ impl Edit {
             Err(_) => Ok(response),
         }
     }
+
+    pub fn builder<'a>() -> EditBuilder<'a> {
+        EditBuilder::default()
+    }
 }
 
 #[derive(Deserialize)]
@@ -35,18 +40,23 @@ struct Choice {
     text: String,
 }
 
-#[derive(Serialize, Default)]
+#[derive(Serialize, Default, Builder)]
+#[builder(pattern = "owned")]
+#[builder(name = "EditBuilder")]
+#[builder(setter(strip_option))]
 pub struct CreateEditRequestBody<'a> {
     /// ID of the model to use.
     /// You can use the `text-davinci-edit-001` or `code-davinci-edit-001` model with this endpoint.
     pub model: ModelID,
     /// The input text to use as a starting point for the edit.
     #[serde(skip_serializing_if = "str::is_empty")]
+    #[builder(default)]
     pub input: &'a str,
     /// The instruction that tells the model how to edit the prompt.
     pub instruction: &'a str,
     /// How many edits to generate for the input and instruction.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub n: Option<u16>,
     /// What [sampling temperature](https://towardsdatascience.com/how-to-sample-from-language-models-682bceb97277) to use.
     /// Higher values means the model will take more risks.
@@ -54,6 +64,7 @@ pub struct CreateEditRequestBody<'a> {
     ///
     /// We generally recommend altering this or `top_p` but not both.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub temperature: Option<f32>,
     /// An alternative to sampling with temperature, called nucleus sampling,
     /// where the model considers the results of the tokens with top_p probability mass.
@@ -61,7 +72,14 @@ pub struct CreateEditRequestBody<'a> {
     ///
     /// We generally recommend altering this or `temperature` but not both.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub top_p: Option<f32>,
+}
+
+impl EditBuilder<'_> {
+    pub async fn create(self) -> ApiResponseOrError<Edit> {
+        Edit::new(&self.build().unwrap()).await
+    }
 }
 
 #[cfg(test)]
@@ -73,16 +91,15 @@ mod tests {
     async fn edit() {
         dotenv().ok();
 
-        let edit = Edit::new(&CreateEditRequestBody {
-            model: ModelID::TextDavinciEdit001,
-            input: "What day of the wek is it?",
-            instruction: "Fix the spelling mistakes",
-            temperature: Some(0.0),
-            ..Default::default()
-        })
-        .await
-        .unwrap()
-        .unwrap();
+        let edit = Edit::builder()
+            .model(ModelID::TextDavinciEdit001)
+            .input("What day of the wek is it?")
+            .instruction("Fix the spelling mistakes")
+            .temperature(0.0)
+            .create()
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(
             edit.choices.first().unwrap(),

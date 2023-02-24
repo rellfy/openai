@@ -2,6 +2,7 @@
 //! and can also return the probabilities of alternative tokens at each position.
 
 use super::{models::ModelID, openai_post, ApiResponseOrError, Usage};
+use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -16,7 +17,7 @@ pub struct Completion {
 
 impl Completion {
     /// Creates a completion for the provided prompt and parameters
-    pub async fn new(body: &CreateCompletionRequestBody<'_>) -> ApiResponseOrError<Self> {
+    async fn new(body: &CreateCompletionRequestBody<'_>) -> ApiResponseOrError<Self> {
         if let Some(enabled) = body.stream {
             if enabled {
                 todo!("the `stream` field is not yet implemented");
@@ -24,6 +25,10 @@ impl Completion {
         }
 
         openai_post("completions", body).await
+    }
+
+    pub fn builder<'a>() -> CompletionBuilder<'a> {
+        CompletionBuilder::default()
     }
 }
 
@@ -35,7 +40,10 @@ pub struct CompletionChoice {
     pub finish_reason: String,
 }
 
-#[derive(Serialize, Default)]
+#[derive(Serialize, Default, Builder)]
+#[builder(pattern = "owned")]
+#[builder(name = "CompletionBuilder")]
+#[builder(setter(strip_option))]
 pub struct CreateCompletionRequestBody<'a> {
     /// ID of the model to use.
     /// You can use the [List models](https://beta.openai.com/docs/api-reference/models/list)
@@ -49,15 +57,18 @@ pub struct CreateCompletionRequestBody<'a> {
     /// Note that <|endoftext|> is the document separator that the model sees during training,
     /// so if a prompt is not specified the model will generate as if from the beginning of a new document.
     #[serde(skip_serializing_if = "str::is_empty")]
+    #[builder(default)]
     pub prompt: &'a str,
     /// The suffix that comes after a completion of inserted text.
     #[serde(skip_serializing_if = "str::is_empty")]
+    #[builder(default)]
     pub suffix: &'a str,
     /// The maximum number of [tokens](https://beta.openai.com/tokenizer) to generate in the completion.
     ///
     /// The token count of your prompt plus `max_tokens` cannot exceed the model's context length.
     /// Most models have a context length of 2048 tokens (except for the newest models, which support 4096).
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub max_tokens: Option<u16>,
     /// What [sampling temperature](https://towardsdatascience.com/how-to-sample-from-language-models-682bceb97277) to use.
     /// Higher values means the model will take more risks.
@@ -65,6 +76,7 @@ pub struct CreateCompletionRequestBody<'a> {
     ///
     /// We generally recommend altering this or `top_p` but not both.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub temperature: Option<f32>,
     /// An alternative to sampling with temperature, called nucleus sampling,
     /// where the model considers the results of the tokens with top_p probability mass.
@@ -72,17 +84,20 @@ pub struct CreateCompletionRequestBody<'a> {
     ///
     /// We generally recommend altering this or `temperature` but not both.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub top_p: Option<f32>,
     /// How many completions to generate for each prompt.
     ///
     /// **Note:** Because this parameter generates many completions, it can quickly consume your token quota.
     /// Use carefully and ensure that you have reasonable settings for `max_tokens` and `stop`.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub n: Option<u16>,
     /// Whether to stream back partial progress. If set, tokens will be sent as data-only
     /// [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Event_stream_format)
     /// as they become available, with the stream terminated by a `data: [DONE]` message.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub stream: Option<bool>,
     /// Include the log probabilities on the logprobs most likely tokens, as well the chosen tokens.
     /// For example, if logprobs is 5, the API will return a list of the 5 most likely tokens.
@@ -91,13 +106,16 @@ pub struct CreateCompletionRequestBody<'a> {
     /// The maximum value for `logprobs` is 5.
     /// If you need more than this, please contact us through our Help center and describe your use case.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub logprobs: Option<u8>,
     /// Echo back the prompt in addition to the completion
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub echo: Option<bool>,
     /// Up to 4 sequences where the API will stop generating further tokens.
     /// The returned text will not contain the stop sequence.
     #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[builder(default)]
     pub stop: Vec<&'a str>,
     /// Number between -2.0 and 2.0.
     /// Positive values penalize new tokens based on whether they appear in the text so far,
@@ -105,6 +123,7 @@ pub struct CreateCompletionRequestBody<'a> {
     ///
     /// [See more information about frequency and presence penalties](https://beta.openai.com/docs/api-reference/parameter-details).
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub presence_penalty: Option<i8>,
     /// Number between -2.0 and 2.0.
     /// Positive values penalize new tokens based on their existing frequency in the text so far,
@@ -112,6 +131,7 @@ pub struct CreateCompletionRequestBody<'a> {
     ///
     /// [See more information about frequency and presence penalties](https://beta.openai.com/docs/api-reference/parameter-details).
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub frequency_penalty: Option<i8>,
     /// Generates `best_of` completions server-side and returns the "best" (the one with the highest log probability per token).
     /// Results cannot be streamed.
@@ -122,6 +142,7 @@ pub struct CreateCompletionRequestBody<'a> {
     /// **Note:** Because this parameter generates many completions, it can quickly consume your token quota.
     /// Use carefully and ensure that you have reasonable settings for `max_tokens` and `stop`.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub best_of: Option<u16>,
     /// Modify the likelihood of specified tokens appearing in the completion.
     ///
@@ -133,11 +154,19 @@ pub struct CreateCompletionRequestBody<'a> {
     ///
     /// As an example, you can pass `{"50256": -100}` to prevent the <|endoftext|> token from being generated.
     #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[builder(default)]
     pub logit_bias: HashMap<&'a str, i16>,
     /// A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     /// [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
     #[serde(skip_serializing_if = "str::is_empty")]
+    #[builder(default)]
     pub user: &'a str,
+}
+
+impl CompletionBuilder<'_> {
+    pub async fn create(self) -> ApiResponseOrError<Completion> {
+        Completion::new(&self.build().unwrap()).await
+    }
 }
 
 #[cfg(test)]
@@ -149,16 +178,15 @@ mod tests {
     async fn completion() {
         dotenv().ok();
 
-        let completion = Completion::new(&CreateCompletionRequestBody {
-            model: ModelID::TextDavinci003,
-            prompt: "Say this is a test",
-            max_tokens: Some(7),
-            temperature: Some(0.0),
-            ..Default::default()
-        })
-        .await
-        .unwrap()
-        .unwrap();
+        let completion = Completion::builder()
+            .model(ModelID::TextDavinci003)
+            .prompt("Say this is a test")
+            .max_tokens(7)
+            .temperature(0.0)
+            .create()
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(
             completion.choices.first().unwrap().text,
