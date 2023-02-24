@@ -5,7 +5,6 @@ authors.workspace = true
 edition.workspace = true
 repository.workspace = true
 license.workspace = true
-publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -24,6 +23,7 @@ features = [ "blocking", "json" ]
 
 [dependencies.openai_bootstrap]
 path = "../openai_bootstrap"
+version = "1.0.0-alpha.3"
 
 [dependencies.serde]
 version = "1.0"

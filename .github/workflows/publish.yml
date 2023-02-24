@@ -4,13 +4,19 @@ on:
   release:
     types: [published]
 
+
+env:
+  CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
+
 jobs:
   publish:
     name: Publish to crates.io
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: cargo publish
-      run: cargo publish --token ${CRATES_TOKEN}
-      env:
-        CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
+    - name: Publish `openai_bootstrap`
+      run: cargo publish --token ${CRATES_TOKEN} -p openai_bootstrap
+    - name: Publish `openai_proc_macros`
+      run: cargo publish --token ${CRATES_TOKEN} -p openai_proc_macros
+    - name: Publish `openai`
+      run: cargo publish --token ${CRATES_TOKEN} -p openai
