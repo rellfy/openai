@@ -439,6 +439,9 @@ dependencies = [
 [[package]]
 name = "openai_bootstrap"
 version = "1.0.0-alpha.2"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "openai_proc_macros"
