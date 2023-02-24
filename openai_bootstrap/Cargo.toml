@@ -3,6 +3,7 @@ name = "openai_bootstrap"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+description = "Bootstrapping crate for the openai crate."
 repository.workspace = true
 license.workspace = true
 
