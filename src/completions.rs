@@ -15,7 +15,7 @@ pub struct Completion {
     pub usage: Usage,
 }
 
-impl<'a> Completion {
+impl Completion {
     /// Creates a completion for the provided prompt and parameters
     async fn new(body: &CreateCompletionRequestBody<'_>) -> ApiResponseOrError<Self> {
         if let Some(enabled) = body.stream {
@@ -27,7 +27,7 @@ impl<'a> Completion {
         openai_post("completions", body).await
     }
 
-    pub fn builder() -> CompletionBuilder<'a> {
+    pub fn builder<'a>() -> CompletionBuilder<'a> {
         CompletionBuilder::default()
     }
 }
