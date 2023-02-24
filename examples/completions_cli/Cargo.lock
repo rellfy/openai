@@ -498,7 +498,7 @@ checksum = "6f61fba1741ea2b3d6a1e3178721804bb716a68a6aeba1149b5d52e3d464ea66"
 
 [[package]]
 name = "openai"
-version = "1.0.0-alpha.2"
+version = "1.0.0-alpha.3"
 dependencies = [
  "derive_builder",
  "dotenvy",
@@ -511,14 +511,14 @@ dependencies = [
 
 [[package]]
 name = "openai_bootstrap"
-version = "1.0.0-alpha.2"
+version = "1.0.0-alpha.3"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "openai_proc_macros"
-version = "1.0.0-alpha.2"
+version = "1.0.0-alpha.3"
 dependencies = [
  "convert_case",
  "dotenvy",
