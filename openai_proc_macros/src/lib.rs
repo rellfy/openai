@@ -33,14 +33,14 @@ pub fn generate_model_id_enum(_input: TokenStream) -> TokenStream {
             let mut index: u32 = 0;
 
             for model in models.data {
-                if model.id.contains(':')
-                    || model.id.contains('.')
-                    || model.id.contains("deprecated")
-                {
+                if model.id.contains(':') || model.id.contains("deprecated") {
                     continue;
                 }
 
-                model_id_idents.push(format_ident!("{}", model.id.to_case(Case::Pascal)));
+                model_id_idents.push(format_ident!(
+                    "{}",
+                    model.id.to_case(Case::Pascal).replace('.', "_")
+                ));
                 model_ids.push(model.id);
                 model_indexes.push(index);
 
@@ -52,13 +52,13 @@ pub fn generate_model_id_enum(_input: TokenStream) -> TokenStream {
 
                 #[derive(Debug, PartialEq, Default)]
                 pub enum ModelID {
-                            #[default]
+                    #[default]
                     #(#model_id_idents),*,
                     Custom(String),
                 }
 
                 impl Serialize for ModelID {
-                            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                     where
                         S: serde::Serializer,
                     {
@@ -67,10 +67,10 @@ pub fn generate_model_id_enum(_input: TokenStream) -> TokenStream {
                             ModelID::Custom(ref string) => serializer.serialize_str(string),
                         }
                     }
-                        }
+                }
 
                 impl<'de> Deserialize<'de> for ModelID {
-                            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+                    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                     where
                         D: serde::Deserializer<'de>,
                     {

@@ -61,11 +61,15 @@ For this, I recommend a crate such as [dotenvy](https://github.com/allan2/dotenv
 
 `████████░░` Completions
 
+`████████░░` Chat
+
 `██████████` Edits
 
 `░░░░░░░░░░` Images
 
 `█████████░` Embeddings
+
+`░░░░░░░░░░` Audio
 
 `░░░░░░░░░░` Files
 

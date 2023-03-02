@@ -2,6 +2,7 @@ use openai_bootstrap::{authorization, ApiResponse, OpenAiError, BASE_URL};
 use reqwest::{Client, Method, RequestBuilder};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+pub mod chat;
 pub mod completions;
 pub mod edits;
 pub mod embeddings;
