@@ -2,7 +2,7 @@
 //!
 //! Related guide: [Embeddings](https://beta.openai.com/docs/guides/embeddings)
 
-use super::{models::ModelID, openai_post, ApiResponseOrError, Usage};
+use super::{models::ModelID, openai_post, ApiResponseOrError};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
@@ -17,7 +17,13 @@ struct CreateEmbeddingsRequestBody<'a> {
 pub struct Embeddings {
     pub data: Vec<Embedding>,
     pub model: ModelID,
-    pub usage: Usage,
+    pub usage: EmbeddingsUsage,
+}
+
+#[derive(Deserialize)]
+pub struct EmbeddingsUsage {
+    pub prompt_tokens: u32,
+    pub total_tokens: u32,
 }
 
 impl Embeddings {
@@ -136,9 +142,8 @@ mod tests {
                 },
             ],
             model: ModelID::TextEmbeddingAda002,
-            usage: Usage {
+            usage: EmbeddingsUsage {
                 prompt_tokens: 0,
-                completion_tokens: Some(0),
                 total_tokens: 0,
             },
         };
@@ -158,9 +163,8 @@ mod tests {
                 },
             ],
             model: ModelID::TextEmbeddingAda002,
-            usage: Usage {
+            usage: EmbeddingsUsage {
                 prompt_tokens: 0,
-                completion_tokens: Some(0),
                 total_tokens: 0,
             },
         };

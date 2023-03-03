@@ -1,6 +1,6 @@
 //! Given a chat conversation, the model will return a chat completion response.
 
-use super::{models::ModelID, openai_post, ApiResponseOrError};
+use super::{models::ModelID, openai_post, ApiResponseOrError, Usage};
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -12,7 +12,7 @@ pub struct ChatCompletion {
     pub created: u64,
     pub model: ModelID,
     pub choices: Vec<ChatCompletionChoice>,
-    pub usage: Option<ChatCompletionUsage>,
+    pub usage: Option<Usage>,
 }
 
 #[derive(Deserialize)]
@@ -36,13 +36,6 @@ pub enum ChatCompletionMessageRole {
     System,
     User,
     Assistant,
-}
-
-#[derive(Deserialize)]
-pub struct ChatCompletionUsage {
-    pub prompt_tokens: u64,
-    pub completion_tokens: u64,
-    pub total_tokens: u64,
 }
 
 #[derive(Serialize, Builder, Debug)]
