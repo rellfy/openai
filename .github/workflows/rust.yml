@@ -28,23 +28,3 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
-    - name: Build docs
-      run: cargo doc --verbose
-    - name: Create docs index file
-      run: echo "<meta http-equiv=\"refresh\" content=\"0; url=openai\">" > target/doc/index.html
-    - uses: actions/upload-pages-artifact@v1
-      with:
-        path: target/doc
-  deploy:
-    needs: build
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v1
