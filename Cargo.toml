@@ -12,19 +12,19 @@ keywords = ["ai", "high-level", "machine-learning", "openai", "library"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde_json = "1.0"
-dotenvy = "0.15"
-derive_builder = "0.12"
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0.0"
+dotenvy = "0.15.1"
+derive_builder = "0.12.0"
+reqwest = { version = "0.11.0", features = ["json"] }
+serde = { version = "1.0.0", features = ["derive"] }
 openai_proc_macros = { path = "openai_proc_macros", version = "1.0.0-alpha.5" }
 openai_bootstrap = { path = "openai_bootstrap", version = "1.0.0-alpha.4" }
 
 [dev-dependencies]
-tokio = { version = "1.25", features = ["full"] }
+tokio = { version = "1.25.0", features = ["full"] }
 
 [build-dependencies]
-dotenvy = "0.15"
+dotenvy = "0.15.1"
 
 [workspace]
 exclude = ["examples"]
