@@ -22,15 +22,18 @@ pub struct ChatCompletionChoice {
     pub finish_reason: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ChatCompletionMessage {
     /// The role of the author of this message.
     pub role: ChatCompletionMessageRole,
     /// The contents of the message
     pub content: String,
+    /// The name of the user in a multi-user chat
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum ChatCompletionMessageRole {
     System,
@@ -46,7 +49,7 @@ pub struct ChatCompletionRequest {
     /// ID of the model to use. Currently, only `gpt-3.5-turbo` and `gpt-3.5-turbo-0301` are supported.
     model: ModelID,
     /// The messages to generate chat completions for, in the [chat format](https://platform.openai.com/docs/guides/chat/introduction).
-    messages: Vec<ChatCompletionRequestMessage>,
+    messages: Vec<ChatCompletionMessage>,
     /// What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
     ///
     /// We generally recommend altering this or `top_p` but not both.
@@ -100,21 +103,10 @@ pub struct ChatCompletionRequest {
     user: String,
 }
 
-#[derive(Serialize, Debug)]
-pub struct ChatCompletionRequestMessage {
-    /// The role of the author of this message.
-    pub role: ChatCompletionMessageRole,
-    /// The contents of the message
-    pub content: String,
-    /// The name of the user in a multi-user chat
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-}
-
 impl ChatCompletion {
     pub fn builder(
         model: ModelID,
-        messages: impl Into<Vec<ChatCompletionRequestMessage>>,
+        messages: impl Into<Vec<ChatCompletionMessage>>,
     ) -> ChatCompletionBuilder {
         ChatCompletionBuilder::create_empty()
             .model(model)
@@ -140,7 +132,7 @@ mod tests {
     async fn chat() {
         let chat_completion = ChatCompletion::builder(
             ModelID::Gpt3_5Turbo,
-            [ChatCompletionRequestMessage {
+            [ChatCompletionMessage {
                 role: ChatCompletionMessageRole::User,
                 content: "Hello!".to_string(),
                 name: None,
