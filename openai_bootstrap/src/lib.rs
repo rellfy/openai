@@ -18,11 +18,6 @@ macro_rules! authorization {
     }};
 }
 
-#[derive(Deserialize)]
-pub struct ErrorResponse {
-    pub error: OpenAiError,
-}
-
 #[derive(Deserialize, Debug)]
 pub struct OpenAiError {
     pub message: String,
@@ -44,5 +39,5 @@ impl std::error::Error for OpenAiError {}
 #[serde(untagged)]
 pub enum ApiResponse<T> {
     Ok(T),
-    Err(ErrorResponse),
+    Err { error: OpenAiError },
 }

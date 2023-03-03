@@ -99,6 +99,6 @@ pub fn generate_model_id_enum(_input: TokenStream) -> TokenStream {
                 }
             }.into()
         }
-        ApiResponse::Err(error) => panic!("{}", error.error),
+        ApiResponse::Err { error } => panic!("{error}"),
     }
 }

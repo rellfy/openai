@@ -31,7 +31,7 @@ where
 
     match api_response {
         ApiResponse::Ok(t) => Ok(Ok(t)),
-        ApiResponse::Err(error) => Ok(Err(error.error)),
+        ApiResponse::Err { error } => Ok(Err(error)),
     }
 }
 
