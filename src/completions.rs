@@ -33,12 +33,6 @@ pub struct Completion {
 impl Completion {
     /// Creates a completion for the provided prompt and parameters
     async fn new(body: &CreateCompletionRequestBody<'_>) -> ApiResponseOrError<Self> {
-        if let Some(enabled) = body.stream {
-            if enabled {
-                todo!("the `stream` field is not yet implemented");
-            }
-        }
-
         openai_post("completions", body).await
     }
 
@@ -112,7 +106,7 @@ pub struct CreateCompletionRequestBody<'a> {
     /// [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Event_stream_format)
     /// as they become available, with the stream terminated by a `data: [DONE]` message.
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[builder(default)]
+    #[builder(setter(skip), default)] // skipped until properly implemented
     pub stream: Option<bool>,
     /// Include the log probabilities on the logprobs most likely tokens, as well the chosen tokens.
     /// For example, if logprobs is 5, the API will return a list of the 5 most likely tokens.
