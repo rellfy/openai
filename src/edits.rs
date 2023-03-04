@@ -19,7 +19,7 @@ use super::{models::ModelID, openai_post, ApiResponseOrError, OpenAiError, Usage
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Edit {
     pub created: u32,
     #[serde(skip_deserializing)]
@@ -50,12 +50,12 @@ impl Edit {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct Choice {
     text: String,
 }
 
-#[derive(Serialize, Default, Builder)]
+#[derive(Serialize, Default, Builder, Clone)]
 #[builder(pattern = "owned")]
 #[builder(name = "EditBuilder")]
 #[builder(setter(strip_option))]

@@ -21,7 +21,7 @@ use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Completion {
     pub id: String,
     pub created: u32,
@@ -41,7 +41,7 @@ impl Completion {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct CompletionChoice {
     pub text: String,
     pub index: u16,
@@ -49,7 +49,7 @@ pub struct CompletionChoice {
     pub finish_reason: String,
 }
 
-#[derive(Serialize, Default, Builder)]
+#[derive(Serialize, Default, Builder, Clone)]
 #[builder(pattern = "owned")]
 #[builder(name = "CompletionBuilder")]
 #[builder(setter(strip_option))]

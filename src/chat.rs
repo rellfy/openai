@@ -20,7 +20,7 @@ use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct ChatCompletion {
     pub id: String,
     pub object: String,
@@ -30,7 +30,7 @@ pub struct ChatCompletion {
     pub usage: Option<Usage>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct ChatCompletionChoice {
     pub index: u64,
     pub message: ChatCompletionMessage,
@@ -56,7 +56,7 @@ pub enum ChatCompletionMessageRole {
     Assistant,
 }
 
-#[derive(Serialize, Builder, Debug)]
+#[derive(Serialize, Builder, Debug, Clone)]
 #[builder(pattern = "owned")]
 #[builder(name = "ChatCompletionBuilder")]
 #[builder(setter(strip_option, into))]

@@ -20,7 +20,7 @@
 use super::{models::ModelID, openai_post, ApiResponseOrError};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 struct CreateEmbeddingsRequestBody<'a> {
     model: ModelID,
     input: Vec<&'a str>,
@@ -28,14 +28,14 @@ struct CreateEmbeddingsRequestBody<'a> {
     user: &'a str,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Embeddings {
     pub data: Vec<Embedding>,
     pub model: ModelID,
     pub usage: EmbeddingsUsage,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Copy)]
 pub struct EmbeddingsUsage {
     pub prompt_tokens: u32,
     pub total_tokens: u32,
@@ -79,7 +79,7 @@ impl Embeddings {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Embedding {
     #[serde(rename = "embedding")]
     pub vec: Vec<f64>,

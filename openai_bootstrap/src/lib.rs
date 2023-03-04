@@ -33,7 +33,7 @@ macro_rules! authorization {
     }};
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct OpenAiError {
     pub message: String,
     #[serde(rename = "type")]
@@ -50,7 +50,7 @@ impl std::fmt::Display for OpenAiError {
 
 impl std::error::Error for OpenAiError {}
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(untagged)]
 pub enum ApiResponse<T> {
     Ok(T),

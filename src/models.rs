@@ -21,7 +21,7 @@ use super::{openai_get, ApiResponseOrError};
 use openai_proc_macros::generate_model_id_enum;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Model {
     pub id: ModelID,
     pub created: u32,
@@ -39,7 +39,7 @@ impl Model {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct ModelPermission {
     pub id: String,
     pub created: u32,

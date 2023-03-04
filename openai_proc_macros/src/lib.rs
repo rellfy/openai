@@ -65,7 +65,7 @@ pub fn generate_model_id_enum(_input: TokenStream) -> TokenStream {
             quote! {
                 use serde::{ Serialize, de };
 
-                #[derive(Debug, PartialEq, Default)]
+                #[derive(Debug, PartialEq, Default, Clone)]
                 pub enum ModelID {
                     #[default]
                     #(#model_id_idents),*,
