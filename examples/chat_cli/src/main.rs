@@ -1,3 +1,4 @@
+use dotenvy::dotenv;
 use openai::{
     chat::{ChatCompletion, ChatCompletionMessage, ChatCompletionMessageRole},
     models::ModelID,
@@ -6,6 +7,9 @@ use std::io::{stdin, stdout, Write};
 
 #[tokio::main]
 async fn main() {
+    // Make sure you have a file named `.env` with the `OPENAI_KEY` environment variable defined!
+    dotenv().unwrap();
+
     let mut messages = vec![ChatCompletionMessage {
         role: ChatCompletionMessageRole::System,
         content: "You are a large language built into a command line interface as an example of what the `openai` Rust library made by Valentine Briese can do.".to_string(),
