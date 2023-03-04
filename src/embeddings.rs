@@ -1,3 +1,18 @@
+// Copyright (C) 2023  Valentine Briese
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 //! Get a vector representation of a given input that can be easily consumed by machine learning models and algorithms.
 //!
 //! Related guide: [Embeddings](https://beta.openai.com/docs/guides/embeddings)
