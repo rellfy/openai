@@ -30,7 +30,7 @@ pub struct Edit {
 }
 
 impl Edit {
-    async fn new(body: &CreateEditRequestBody<'_>) -> ApiResponseOrError<Self> {
+    async fn create(body: &CreateEditRequestBody<'_>) -> ApiResponseOrError<Self> {
         let response: Result<Self, OpenAiError> = openai_post("edits", body).await?;
 
         match response {
@@ -93,7 +93,7 @@ pub struct CreateEditRequestBody<'a> {
 
 impl EditBuilder<'_> {
     pub async fn create(self) -> ApiResponseOrError<Edit> {
-        Edit::new(&self.build().unwrap()).await
+        Edit::create(&self.build().unwrap()).await
     }
 }
 

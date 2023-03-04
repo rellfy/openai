@@ -55,7 +55,7 @@ impl Embeddings {
     ///   Each input must not exceed 8192 tokens in length.
     /// * `user` - A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     ///   [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
-    pub async fn new(model: ModelID, input: Vec<&str>, user: &str) -> ApiResponseOrError<Self> {
+    pub async fn create(model: ModelID, input: Vec<&str>, user: &str) -> ApiResponseOrError<Self> {
         openai_post(
             "embeddings",
             &CreateEmbeddingsRequestBody { model, input, user },
@@ -87,7 +87,7 @@ pub struct Embedding {
 
 impl Embedding {
     pub async fn new(model: ModelID, input: &str, user: &str) -> ApiResponseOrError<Self> {
-        let response = Embeddings::new(model, vec![input], user).await?;
+        let response = Embeddings::create(model, vec![input], user).await?;
 
         match response {
             Ok(mut embeddings) => Ok(Ok(embeddings.data.swap_remove(0))),
@@ -117,7 +117,7 @@ mod tests {
     async fn embeddings() {
         dotenv().ok();
 
-        let embeddings = Embeddings::new(
+        let embeddings = Embeddings::create(
             ModelID::TextEmbeddingAda002,
             vec!["The food was delicious and the waiter..."],
             "",

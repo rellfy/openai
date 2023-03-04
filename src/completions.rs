@@ -32,7 +32,7 @@ pub struct Completion {
 
 impl Completion {
     /// Creates a completion for the provided prompt and parameters
-    async fn new(body: &CreateCompletionRequestBody<'_>) -> ApiResponseOrError<Self> {
+    async fn create(body: &CreateCompletionRequestBody<'_>) -> ApiResponseOrError<Self> {
         openai_post("completions", body).await
     }
 
@@ -174,7 +174,7 @@ pub struct CreateCompletionRequestBody<'a> {
 
 impl CompletionBuilder<'_> {
     pub async fn create(self) -> ApiResponseOrError<Completion> {
-        Completion::new(&self.build().unwrap()).await
+        Completion::create(&self.build().unwrap()).await
     }
 }
 
