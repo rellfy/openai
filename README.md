@@ -9,7 +9,7 @@ An unofficial Rust library for the OpenAI API.
 
 > **Warning**
 > 
-> Currently in alpha, not yet stable enough to be used in any production applications.
+> Currently in alpha, I wouldn't recommend using in any production applications.
 > See [Implementation Progress](#implementation-progress).
 
 ## Core Principles
@@ -23,13 +23,12 @@ An unofficial Rust library for the OpenAI API.
   The goal here isn't to just give some basic wrapper functions for making HTTP requests,
   it's to "rust-ify" things. We want to create the illusion that the OpenAI API was made in Rust first!
 - What is this, C? No, it's Rust! We follow the object-oriented paradigm, not the procedural one.
-  What this mainly means is less `create_completion()`, more `Completion::new()`.
+  What this mainly means is less `create_completion()`, more `Completion::create()`.
 
 ## Examples
 
 I'm still working on making examples in the `examples` directory.
-If you're looking to work with the `completions` module, you're in luck!
-Because that's the only module there is an example for right now.
+Currently, there are examples for the `completions` module and the `chat` module.
 For other modules, you can look at the `tests` submodules for some reference.
 
 Examples come slowly because this project, in its current state, changes very quickly,
