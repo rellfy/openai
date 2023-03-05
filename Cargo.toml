@@ -34,4 +34,4 @@ authors = ["valentinegb"]
 documentation = "https://valentinegb.github.io/openai/"
 edition = "2021"
 repository = "https://github.com/valentinegb/openai"
-license = "LGPL-3.0-or-later"
+license = "MIT"
