@@ -30,17 +30,6 @@ pub struct Completion {
     pub usage: Usage,
 }
 
-impl Completion {
-    /// Creates a completion for the provided prompt and parameters
-    async fn create(body: &CreateCompletionRequestBody<'_>) -> ApiResponseOrError<Self> {
-        openai_post("completions", body).await
-    }
-
-    pub fn builder<'a>() -> CompletionBuilder<'a> {
-        CompletionBuilder::default()
-    }
-}
-
 #[derive(Deserialize, Clone)]
 pub struct CompletionChoice {
     pub text: String,
@@ -49,11 +38,11 @@ pub struct CompletionChoice {
     pub finish_reason: String,
 }
 
-#[derive(Serialize, Default, Builder, Clone)]
+#[derive(Serialize, Builder, Debug, Clone)]
 #[builder(pattern = "owned")]
 #[builder(name = "CompletionBuilder")]
-#[builder(setter(strip_option))]
-pub struct CreateCompletionRequestBody<'a> {
+#[builder(setter(strip_option, into))]
+pub struct CompletionRequest {
     /// ID of the model to use.
     /// You can use the [List models](https://beta.openai.com/docs/api-reference/models/list)
     /// API to see all of your available models,
@@ -65,19 +54,19 @@ pub struct CreateCompletionRequestBody<'a> {
     ///
     /// Note that <|endoftext|> is the document separator that the model sees during training,
     /// so if a prompt is not specified the model will generate as if from the beginning of a new document.
-    #[serde(skip_serializing_if = "str::is_empty")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default)]
-    pub prompt: &'a str,
+    pub prompt: Option<String>,
     /// The suffix that comes after a completion of inserted text.
-    #[serde(skip_serializing_if = "str::is_empty")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default)]
-    pub suffix: &'a str,
+    pub suffix: Option<String>,
     /// The maximum number of [tokens](https://beta.openai.com/tokenizer) to generate in the completion.
     ///
     /// The token count of your prompt plus `max_tokens` cannot exceed the model's context length.
     /// Most models have a context length of 2048 tokens (except for the newest models, which support 4096).
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[builder(default)]
+    #[builder(setter(into = false), default)]
     pub max_tokens: Option<u16>,
     /// What [sampling temperature](https://towardsdatascience.com/how-to-sample-from-language-models-682bceb97277) to use.
     /// Higher values means the model will take more risks.
@@ -125,7 +114,7 @@ pub struct CreateCompletionRequestBody<'a> {
     /// The returned text will not contain the stop sequence.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     #[builder(default)]
-    pub stop: Vec<&'a str>,
+    pub stop: Vec<String>,
     /// Number between -2.0 and 2.0.
     /// Positive values penalize new tokens based on whether they appear in the text so far,
     /// increasing the model's likelihood to talk about new topics.
@@ -164,15 +153,26 @@ pub struct CreateCompletionRequestBody<'a> {
     /// As an example, you can pass `{"50256": -100}` to prevent the <|endoftext|> token from being generated.
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     #[builder(default)]
-    pub logit_bias: HashMap<&'a str, i16>,
+    pub logit_bias: HashMap<String, i16>,
     /// A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     /// [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
-    #[serde(skip_serializing_if = "str::is_empty")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default)]
-    pub user: &'a str,
+    pub user: Option<String>,
 }
 
-impl CompletionBuilder<'_> {
+impl Completion {
+    /// Creates a completion for the provided prompt and parameters
+    async fn create(request: &CompletionRequest) -> ApiResponseOrError<Self> {
+        openai_post("completions", request).await
+    }
+
+    pub fn builder(model: ModelID) -> CompletionBuilder {
+        CompletionBuilder::create_empty().model(model)
+    }
+}
+
+impl CompletionBuilder {
     pub async fn create(self) -> ApiResponseOrError<Completion> {
         Completion::create(&self.build().unwrap()).await
     }
@@ -187,8 +187,7 @@ mod tests {
     async fn completion() {
         dotenv().ok();
 
-        let completion = Completion::builder()
-            .model(ModelID::TextDavinci003)
+        let completion = Completion::builder(ModelID::TextDavinci003)
             .prompt("Say this is a test")
             .max_tokens(7)
             .temperature(0.0)

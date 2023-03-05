@@ -26,52 +26,31 @@ pub struct Edit {
     pub choices: Vec<String>,
     pub usage: Usage,
     #[serde(rename = "choices")]
-    choices_bad: Vec<Choice>,
-}
-
-impl Edit {
-    async fn create(body: &CreateEditRequestBody<'_>) -> ApiResponseOrError<Self> {
-        let response: Result<Self, OpenAiError> = openai_post("edits", body).await?;
-
-        match response {
-            Ok(mut edit) => {
-                for choice in &edit.choices_bad {
-                    edit.choices.push(choice.text.clone());
-                }
-
-                Ok(Ok(edit))
-            }
-            Err(_) => Ok(response),
-        }
-    }
-
-    pub fn builder<'a>() -> EditBuilder<'a> {
-        EditBuilder::default()
-    }
+    choices_bad: Vec<EditChoice>,
 }
 
 #[derive(Deserialize, Clone)]
-struct Choice {
+struct EditChoice {
     text: String,
 }
 
-#[derive(Serialize, Default, Builder, Clone)]
+#[derive(Serialize, Builder, Debug, Clone)]
 #[builder(pattern = "owned")]
 #[builder(name = "EditBuilder")]
-#[builder(setter(strip_option))]
-pub struct CreateEditRequestBody<'a> {
+#[builder(setter(strip_option, into))]
+pub struct EditRequest {
     /// ID of the model to use.
     /// You can use the `text-davinci-edit-001` or `code-davinci-edit-001` model with this endpoint.
     pub model: ModelID,
     /// The input text to use as a starting point for the edit.
-    #[serde(skip_serializing_if = "str::is_empty")]
-    #[builder(default)]
-    pub input: &'a str,
-    /// The instruction that tells the model how to edit the prompt.
-    pub instruction: &'a str,
-    /// How many edits to generate for the input and instruction.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default)]
+    pub input: Option<String>,
+    /// The instruction that tells the model how to edit the prompt.
+    pub instruction: String,
+    /// How many edits to generate for the input and instruction.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(setter(into = false), default)]
     pub n: Option<u16>,
     /// What [sampling temperature](https://towardsdatascience.com/how-to-sample-from-language-models-682bceb97277) to use.
     /// Higher values means the model will take more risks.
@@ -91,7 +70,30 @@ pub struct CreateEditRequestBody<'a> {
     pub top_p: Option<f32>,
 }
 
-impl EditBuilder<'_> {
+impl Edit {
+    async fn create(request: &EditRequest) -> ApiResponseOrError<Self> {
+        let response: Result<Self, OpenAiError> = openai_post("edits", request).await?;
+
+        match response {
+            Ok(mut edit) => {
+                for choice in &edit.choices_bad {
+                    edit.choices.push(choice.text.clone());
+                }
+
+                Ok(Ok(edit))
+            }
+            Err(_) => Ok(response),
+        }
+    }
+
+    pub fn builder(model: ModelID, instruction: impl Into<String>) -> EditBuilder {
+        EditBuilder::create_empty()
+            .model(model)
+            .instruction(instruction)
+    }
+}
+
+impl EditBuilder {
     pub async fn create(self) -> ApiResponseOrError<Edit> {
         Edit::create(&self.build().unwrap()).await
     }
@@ -106,10 +108,8 @@ mod tests {
     async fn edit() {
         dotenv().ok();
 
-        let edit = Edit::builder()
-            .model(ModelID::TextDavinciEdit001)
+        let edit = Edit::builder(ModelID::TextDavinciEdit001, "Fix the spelling mistakes")
             .input("What day of the wek is it?")
-            .instruction("Fix the spelling mistakes")
             .temperature(0.0)
             .create()
             .await

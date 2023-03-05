@@ -41,6 +41,12 @@ pub struct EmbeddingsUsage {
     pub total_tokens: u32,
 }
 
+#[derive(Deserialize, Clone)]
+pub struct Embedding {
+    #[serde(rename = "embedding")]
+    pub vec: Vec<f64>,
+}
+
 impl Embeddings {
     /// Creates an embedding vector representing the input text.
     ///
@@ -57,7 +63,7 @@ impl Embeddings {
     ///   [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
     pub async fn create(model: ModelID, input: Vec<&str>, user: &str) -> ApiResponseOrError<Self> {
         openai_post(
-            "embeddings",
+                "embeddings",
             &CreateEmbeddingsRequestBody { model, input, user },
         )
         .await
@@ -77,12 +83,6 @@ impl Embeddings {
 
         distances
     }
-}
-
-#[derive(Deserialize, Clone)]
-pub struct Embedding {
-    #[serde(rename = "embedding")]
-    pub vec: Vec<f64>,
 }
 
 impl Embedding {

@@ -142,9 +142,12 @@ impl ChatCompletionBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dotenvy::dotenv;
 
     #[tokio::test]
     async fn chat() {
+        dotenv().ok();
+
         let chat_completion = ChatCompletion::builder(
             ModelID::Gpt3_5Turbo,
             [ChatCompletionMessage {

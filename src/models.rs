@@ -31,14 +31,6 @@ pub struct Model {
     pub parent: Option<String>,
 }
 
-impl Model {
-    //! Retrieves a model instance,
-    //! providing basic information about the model such as the owner and permissioning.
-    pub async fn from(id: ModelID) -> ApiResponseOrError<Self> {
-        openai_get(&format!("models/{id}")).await
-    }
-}
-
 #[derive(Deserialize, Clone)]
 pub struct ModelPermission {
     pub id: String,
@@ -52,6 +44,14 @@ pub struct ModelPermission {
     pub organization: String,
     pub group: Option<String>,
     pub is_blocking: bool,
+}
+
+impl Model {
+    //! Retrieves a model instance,
+    //! providing basic information about the model such as the owner and permissioning.
+    pub async fn from(id: ModelID) -> ApiResponseOrError<Self> {
+        openai_get(&format!("models/{id}")).await
+    }
 }
 
 generate_model_id_enum!();
