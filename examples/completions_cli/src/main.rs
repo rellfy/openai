@@ -14,8 +14,7 @@ async fn main() {
 
         stdin().read_line(&mut prompt).unwrap();
 
-        let completion = Completion::builder()
-            .model(ModelID::TextDavinci003)
+        let completion = Completion::builder(ModelID::TextDavinci003)
             .prompt(&prompt)
             .max_tokens(1024)
             .create()
