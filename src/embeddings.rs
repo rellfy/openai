@@ -71,7 +71,7 @@ impl Embeddings {
 }
 
 impl Embedding {
-    pub async fn new(model: ModelID, input: &str, user: &str) -> ApiResponseOrError<Self> {
+    pub async fn create(model: ModelID, input: &str, user: &str) -> ApiResponseOrError<Self> {
         let response = Embeddings::create(model, vec![input], user).await?;
 
         match response {
@@ -118,7 +118,7 @@ mod tests {
     async fn embedding() {
         dotenv().ok();
 
-        let embedding = Embedding::new(
+        let embedding = Embedding::create(
             ModelID::TextEmbeddingAda002,
             "The food was delicious and the waiter...",
             "",
