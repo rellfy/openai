@@ -1,6 +1,6 @@
 [package]
 name = "openai"
-version = "1.0.0-alpha.5"
+version = "1.0.0-alpha.6"
 authors.workspace = true
 edition.workspace = true
 description = "An unofficial Rust library for the OpenAI API."
@@ -17,8 +17,8 @@ dotenvy = "0.15.6"
 derive_builder = "0.12.0"
 reqwest = { version = "0.11.14", features = ["json"] }
 serde = { version = "1.0.152", features = ["derive"] }
-openai_proc_macros = { path = "openai_proc_macros", version = "1.0.0-alpha.5" }
-openai_bootstrap = { path = "openai_bootstrap", version = "1.0.0-alpha.4" }
+openai_bootstrap = { path = "openai_bootstrap", version = "1.0.0-alpha.5" }
+openai_proc_macros = { path = "openai_proc_macros", version = "1.0.0-alpha.6" }
 
 [dev-dependencies]
 tokio = { version = "1.26.0", features = ["full"] }

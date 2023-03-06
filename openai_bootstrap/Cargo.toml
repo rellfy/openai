@@ -1,6 +1,6 @@
 [package]
 name = "openai_bootstrap"
-version = "1.0.0-alpha.4"
+version = "1.0.0-alpha.5"
 authors.workspace = true
 edition.workspace = true
 description = "Bootstrapping crate for the openai crate."
