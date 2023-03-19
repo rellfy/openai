@@ -1,4 +1,5 @@
-use openai_bootstrap::{authorization, ApiResponse, OpenAiError, BASE_URL};
+use openai_bootstrap::{authorization, ApiResponse, BASE_URL};
+pub use openai_bootstrap::OpenAiError;
 use reqwest::{Client, Method, RequestBuilder};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
