@@ -2,12 +2,12 @@
 //!
 //! Related guide: [Embeddings](https://beta.openai.com/docs/guides/embeddings)
 
-use super::{models::ModelID, openai_post, ApiResponseOrError};
+use super::{openai_post, ApiResponseOrError};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Clone)]
 struct CreateEmbeddingsRequestBody<'a> {
-    model: ModelID,
+    model: &'a str,
     input: Vec<&'a str>,
     #[serde(skip_serializing_if = "str::is_empty")]
     user: &'a str,
@@ -16,7 +16,7 @@ struct CreateEmbeddingsRequestBody<'a> {
 #[derive(Deserialize, Clone)]
 pub struct Embeddings {
     pub data: Vec<Embedding>,
-    pub model: ModelID,
+    pub model: String,
     pub usage: EmbeddingsUsage,
 }
 
@@ -46,9 +46,9 @@ impl Embeddings {
     ///   Each input must not exceed 8192 tokens in length.
     /// * `user` - A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     ///   [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
-    pub async fn create(model: ModelID, input: Vec<&str>, user: &str) -> ApiResponseOrError<Self> {
+    pub async fn create(model: &str, input: Vec<&str>, user: &str) -> ApiResponseOrError<Self> {
         openai_post(
-                "embeddings",
+            "embeddings",
             &CreateEmbeddingsRequestBody { model, input, user },
         )
         .await
@@ -71,7 +71,7 @@ impl Embeddings {
 }
 
 impl Embedding {
-    pub async fn create(model: ModelID, input: &str, user: &str) -> ApiResponseOrError<Self> {
+    pub async fn create(model: &str, input: &str, user: &str) -> ApiResponseOrError<Self> {
         let response = Embeddings::create(model, vec![input], user).await?;
 
         match response {
@@ -96,14 +96,17 @@ impl Embedding {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::set_key;
     use dotenvy::dotenv;
+    use std::env;
 
     #[tokio::test]
     async fn embeddings() {
         dotenv().ok();
+        set_key(env::var("OPENAI_KEY").unwrap());
 
         let embeddings = Embeddings::create(
-            ModelID::TextEmbeddingAda002,
+            "text-embedding-ada-002",
             vec!["The food was delicious and the waiter..."],
             "",
         )
@@ -117,9 +120,10 @@ mod tests {
     #[tokio::test]
     async fn embedding() {
         dotenv().ok();
+        set_key(env::var("OPENAI_KEY").unwrap());
 
         let embedding = Embedding::create(
-            ModelID::TextEmbeddingAda002,
+            "text-embedding-ada-002",
             "The food was delicious and the waiter...",
             "",
         )
@@ -141,7 +145,7 @@ mod tests {
                     vec: vec![0.0, 1.0, 0.0],
                 },
             ],
-            model: ModelID::TextEmbeddingAda002,
+            model: "text-embedding-ada-002".to_string(),
             usage: EmbeddingsUsage {
                 prompt_tokens: 0,
                 total_tokens: 0,
@@ -162,7 +166,7 @@ mod tests {
                     vec: vec![0.0, 1.0, 0.0],
                 },
             ],
-            model: ModelID::TextEmbeddingAda002,
+            model: "text-embedding-ada-002".to_string(),
             usage: EmbeddingsUsage {
                 prompt_tokens: 0,
                 total_tokens: 0,

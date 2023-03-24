@@ -1,13 +1,40 @@
-use openai_bootstrap::{authorization, ApiResponse, BASE_URL};
-pub use openai_bootstrap::OpenAiError;
-use reqwest::{Client, Method, RequestBuilder};
+use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::sync::Mutex;
 
 pub mod chat;
 pub mod completions;
 pub mod edits;
 pub mod embeddings;
 pub mod models;
+
+pub const BASE_URL: &str = "https://api.openai.com/v1/";
+
+static API_KEY: Mutex<String> = Mutex::new(String::new());
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct OpenAiError {
+    pub message: String,
+    #[serde(rename = "type")]
+    pub error_type: String,
+    pub param: Option<String>,
+    pub code: Option<String>,
+}
+
+impl std::fmt::Display for OpenAiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for OpenAiError {}
+
+#[derive(Deserialize, Clone)]
+#[serde(untagged)]
+pub enum ApiResponse<T> {
+    Ok(T),
+    Err { error: OpenAiError },
+}
 
 #[derive(Deserialize, Clone, Copy)]
 pub struct Usage {
@@ -28,7 +55,12 @@ where
 
     request = builder(request);
 
-    let api_response: ApiResponse<T> = authorization!(request).send().await?.json().await?;
+    let api_response: ApiResponse<T> = request
+        .header(AUTHORIZATION, format!("Bearer {}", API_KEY.lock().unwrap()))
+        .send()
+        .await?
+        .json()
+        .await?;
 
     match api_response {
         ApiResponse::Ok(t) => Ok(Ok(t)),
@@ -49,4 +81,8 @@ where
     T: DeserializeOwned,
 {
     openai_request(Method::POST, route, |request| request.json(json)).await
+}
+
+pub fn set_key(value: String) {
+    *API_KEY.lock().unwrap() = value;
 }

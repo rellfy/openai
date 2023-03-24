@@ -23,7 +23,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
       - name: Publish `openai_bootstrap`
         continue-on-error: true
         run: cargo publish --token ${CRATES_TOKEN} -p openai_bootstrap

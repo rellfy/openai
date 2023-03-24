@@ -1,7 +1,7 @@
 //! Given a prompt, the model will return one or more predicted completions,
 //! and can also return the probabilities of alternative tokens at each position.
 
-use super::{models::ModelID, openai_post, ApiResponseOrError, Usage};
+use super::{openai_post, ApiResponseOrError, Usage};
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -10,7 +10,7 @@ use std::collections::HashMap;
 pub struct Completion {
     pub id: String,
     pub created: u32,
-    pub model: ModelID,
+    pub model: String,
     pub choices: Vec<CompletionChoice>,
     pub usage: Usage,
 }
@@ -33,7 +33,7 @@ pub struct CompletionRequest {
     /// API to see all of your available models,
     /// or see our [Model overview](https://beta.openai.com/docs/models/overview)
     /// for descriptions of them.
-    pub model: ModelID,
+    pub model: String,
     /// The prompt(s) to generate completions for, encoded as a string,
     /// array of strings, array of tokens, or array of token arrays.
     ///
@@ -152,7 +152,7 @@ impl Completion {
         openai_post("completions", request).await
     }
 
-    pub fn builder(model: ModelID) -> CompletionBuilder {
+    pub fn builder(model: &str) -> CompletionBuilder {
         CompletionBuilder::create_empty().model(model)
     }
 }
@@ -166,13 +166,16 @@ impl CompletionBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::set_key;
     use dotenvy::dotenv;
+    use std::env;
 
     #[tokio::test]
     async fn completion() {
         dotenv().ok();
+        set_key(env::var("OPENAI_KEY").unwrap());
 
-        let completion = Completion::builder(ModelID::TextDavinci003)
+        let completion = Completion::builder("text-davinci-003")
             .prompt("Say this is a test")
             .max_tokens(7)
             .temperature(0.0)

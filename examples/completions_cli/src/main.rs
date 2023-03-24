@@ -1,11 +1,12 @@
 use dotenvy::dotenv;
-use openai::{completions::Completion, models::ModelID};
-use std::io::stdin;
+use openai::{completions::Completion, set_key};
+use std::{env, io::stdin};
 
 #[tokio::main]
 async fn main() {
     // Make sure you have a file named `.env` with the `OPENAI_KEY` environment variable defined!
     dotenv().unwrap();
+    set_key(env::var("OPENAI_KEY").unwrap());
 
     loop {
         println!("Prompt:");
@@ -14,7 +15,7 @@ async fn main() {
 
         stdin().read_line(&mut prompt).unwrap();
 
-        let completion = Completion::builder(ModelID::TextDavinci003)
+        let completion = Completion::builder("text-davinci-003")
             .prompt(&prompt)
             .max_tokens(1024)
             .create()

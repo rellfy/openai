@@ -1,6 +1,6 @@
 //! Given a prompt and an instruction, the model will return an edited version of the prompt.
 
-use super::{models::ModelID, openai_post, ApiResponseOrError, OpenAiError, Usage};
+use super::{openai_post, ApiResponseOrError, OpenAiError, Usage};
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
@@ -26,7 +26,7 @@ struct EditChoice {
 pub struct EditRequest {
     /// ID of the model to use.
     /// You can use the `text-davinci-edit-001` or `code-davinci-edit-001` model with this endpoint.
-    pub model: ModelID,
+    pub model: String,
     /// The input text to use as a starting point for the edit.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default)]
@@ -71,7 +71,7 @@ impl Edit {
         }
     }
 
-    pub fn builder(model: ModelID, instruction: impl Into<String>) -> EditBuilder {
+    pub fn builder(model: &str, instruction: impl Into<String>) -> EditBuilder {
         EditBuilder::create_empty()
             .model(model)
             .instruction(instruction)
@@ -87,13 +87,16 @@ impl EditBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::set_key;
     use dotenvy::dotenv;
+    use std::env;
 
     #[tokio::test]
     async fn edit() {
         dotenv().ok();
+        set_key(env::var("OPENAI_KEY").unwrap());
 
-        let edit = Edit::builder(ModelID::TextDavinciEdit001, "Fix the spelling mistakes")
+        let edit = Edit::builder("text-davinci-edit-001", "Fix the spelling mistakes")
             .input("What day of the wek is it?")
             .temperature(0.0)
             .create()

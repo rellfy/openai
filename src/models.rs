@@ -3,12 +3,11 @@
 //! documentation to understand what models are available and the differences between them.
 
 use super::{openai_get, ApiResponseOrError};
-use openai_proc_macros::generate_model_id_enum;
 use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
 pub struct Model {
-    pub id: ModelID,
+    pub id: String,
     pub created: u32,
     pub owned_by: String,
     pub permission: Vec<ModelPermission>,
@@ -34,83 +33,38 @@ pub struct ModelPermission {
 impl Model {
     //! Retrieves a model instance,
     //! providing basic information about the model such as the owner and permissioning.
-    pub async fn from(id: ModelID) -> ApiResponseOrError<Self> {
+    pub async fn from(id: &str) -> ApiResponseOrError<Self> {
         openai_get(&format!("models/{id}")).await
-    }
-}
-
-generate_model_id_enum!();
-
-impl std::fmt::Display for ModelID {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let ModelID::Custom(id) = self {
-            write!(f, "{id}")
-        } else {
-            let serialized = serde_json::to_string(self).unwrap();
-
-            write!(f, "{}", &serialized[1..serialized.len() - 1])
-        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::set_key;
     use dotenvy::dotenv;
-
-    #[test]
-    fn model_id_serialization() -> Result<(), serde_json::Error> {
-        assert_eq!(
-            serde_json::ser::to_string(&ModelID::TextDavinci003)?,
-            "\"text-davinci-003\"",
-        );
-
-        assert_eq!(
-            serde_json::ser::to_string(&ModelID::Custom("custom".to_string()))?,
-            "\"custom\"",
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn model_id_deserialization() -> Result<(), serde_json::Error> {
-        assert_eq!(
-            serde_json::de::from_str::<ModelID>("\"text-davinci-003\"")?,
-            ModelID::TextDavinci003,
-        );
-
-        assert_eq!(
-            serde_json::de::from_str::<ModelID>("\"custom\"")?,
-            ModelID::Custom("custom".to_string()),
-        );
-
-        Ok(())
-    }
+    use std::env;
 
     #[tokio::test]
     async fn model() {
         dotenv().ok();
+        set_key(env::var("OPENAI_KEY").unwrap());
 
-        let model = Model::from(ModelID::TextDavinci003).await.unwrap().unwrap();
+        let model = Model::from("text-davinci-003").await.unwrap().unwrap();
 
-        assert_eq!(model.id, ModelID::TextDavinci003,);
+        assert_eq!(model.id, "text-davinci-003");
     }
 
     #[tokio::test]
     async fn custom_model() {
         dotenv().ok();
+        set_key(env::var("OPENAI_KEY").unwrap());
 
-        let model = Model::from(ModelID::Custom(
-            "davinci:ft-personal-2022-12-12-04-49-51".to_string(),
-        ))
-        .await
-        .unwrap()
-        .unwrap();
+        let model = Model::from("davinci:ft-personal-2022-12-12-04-49-51")
+            .await
+            .unwrap()
+            .unwrap();
 
-        assert_eq!(
-            model.id,
-            ModelID::Custom("davinci:ft-personal-2022-12-12-04-49-51".to_string()),
-        );
+        assert_eq!(model.id, "davinci:ft-personal-2022-12-12-04-49-51");
     }
 }
