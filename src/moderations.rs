@@ -82,13 +82,18 @@ impl ModerationBuilder {
 
 #[cfg(test)]
 mod tests {
+    use std::env;
+
     use dotenvy::dotenv;
+
+    use crate::set_key;
 
     use super::*;
 
     #[tokio::test]
     async fn moderations() {
         dotenv().ok();
+        set_key(env::var("OPENAI_KEY").unwrap());
 
         let moderation = Moderation::builder("I want to kill them.")
             .model("text-moderation-latest")
