@@ -16,7 +16,7 @@ async fn main() {
 
     let mut messages = vec![ChatCompletionMessage {
         role: ChatCompletionMessageRole::System,
-        content: "You are a large language built into a command line interface as an example of what the `openai` Rust library made by Valentine Briese can do.".to_string(),
+        content: "You are a large language model built into a command line interface as an example of what the `openai` Rust library made by Valentine Briese can do.".to_string(),
         name: None,
     }];
 
