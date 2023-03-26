@@ -26,5 +26,7 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
     - name: Build
       run: cargo build --verbose
-    - name: Run tests
+    - name: Run tests (native-tls)
       run: cargo test --verbose
+    - name: Run tests (rustls)
+      run: cargo test --verbose --no-default-features --features=rustls
