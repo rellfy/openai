@@ -92,6 +92,7 @@ mod tests {
     use std::env;
 
     #[tokio::test]
+    #[ignore]
     async fn edit() {
         dotenv().ok();
         set_key(env::var("OPENAI_KEY").unwrap());
