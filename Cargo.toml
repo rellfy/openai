@@ -1,11 +1,11 @@
 [package]
 name = "openai"
 version = "1.0.0-alpha.7"
-authors.workspace = true
-edition.workspace = true
+authors = ["valentinegb"]
+edition = "2021"
 description = "An unofficial Rust library for the OpenAI API."
-repository.workspace = true
-license.workspace = true
+repository = "https://github.com/valentinegb/openai"
+license = "MIT"
 keywords = ["ai", "high-level", "machine-learning", "openai", "library"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -24,12 +24,3 @@ tokio = { version = "1.26.0", features = ["full"] }
 default = ["native-tls"]
 native-tls = ["reqwest/native-tls"]
 rustls = ["reqwest/rustls-tls"]
-
-[workspace]
-exclude = ["examples"]
-
-[workspace.package]
-authors = ["valentinegb"]
-edition = "2021"
-repository = "https://github.com/valentinegb/openai"
-license = "MIT"
