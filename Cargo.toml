@@ -21,6 +21,11 @@ serde = { version = "1.0.157", features = ["derive"] }
 dotenvy = "0.15.7"
 tokio = { version = "1.26.0", features = ["full"] }
 
+[features]
+default = ["native-tls"]
+native-tls = ["reqwest/native-tls"]
+rustls = ["reqwest/rustls-tls"]
+
 [workspace]
 exclude = ["examples"]
 
@@ -30,10 +35,3 @@ documentation = "https://valentinegb.github.io/openai/"
 edition = "2021"
 repository = "https://github.com/valentinegb/openai"
 license = "MIT"
-
-[features]
-default = ["native-tls"]
-
-native-tls = [ "reqwest/native-tls" ]
-
-rustls = [ "reqwest/rustls-tls" ]
