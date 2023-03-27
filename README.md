@@ -53,4 +53,4 @@ and it's not fun making sure all examples accurately reflect the latest version.
 
 `░░░░░░░░░░` Fine-tunes
 
-`░░░░░░░░░░` Moderations
+`██████████` Moderations
