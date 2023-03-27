@@ -8,6 +8,7 @@ use super::{ApiResponseOrError, openai_post};
 #[derive(Deserialize, Clone, Debug)]
 pub struct Moderation {
     pub id: String,
+    pub model: String,
     pub results: Vec<ModerationResult>,
 }
 
@@ -18,34 +19,34 @@ pub struct ModerationResult {
     pub flagged: bool,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Copy, Debug)]
 pub struct Categories {
     pub hate: bool,
     #[serde(rename = "hate/threatening")]
-    pub hate_or_threatening: bool,
+    pub hate_threatening: bool,
     #[serde(rename = "self-harm")]
     pub self_harm: bool,
     pub sexual: bool,
     #[serde(rename = "sexual/minors")]
-    pub sexual_or_minors: bool,
+    pub sexual_minors: bool,
     pub violence: bool,
     #[serde(rename = "violence/graphic")]
-    pub violence_or_graphic: bool,
+    pub violence_graphic: bool,
 }
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct CategoryScores {
     pub hate: f64,
     #[serde(rename = "hate/threatening")]
-    pub hate_or_threatening: f64,
+    pub hate_threatening: f64,
     #[serde(rename = "self-harm")]
     pub self_harm: f64,
     pub sexual: f64,
     #[serde(rename = "sexual/minors")]
-    pub sexual_or_minors: f64,
+    pub sexual_minors: f64,
     pub violence: f64,
     #[serde(rename = "violence/graphic")]
-    pub violence_or_graphic: f64,
+    pub violence_graphic: f64,
 }
 
 
