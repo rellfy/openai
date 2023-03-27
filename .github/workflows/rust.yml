@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
     - uses: actions/cache@v3
       with:
         path: |
@@ -26,5 +28,7 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
     - name: Build
       run: cargo build --verbose
-    - name: Run tests
+    - name: Run tests (native-tls)
       run: cargo test --verbose
+    - name: Run tests (rustls)
+      run: cargo test --verbose --no-default-features --features=rustls
