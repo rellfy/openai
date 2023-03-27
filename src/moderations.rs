@@ -8,45 +8,44 @@ use super::{ApiResponseOrError, openai_post};
 #[derive(Deserialize, Clone, Debug)]
 pub struct Moderation {
     pub id: String,
-    #[serde(rename = "results")]
     pub results: Vec<ModerationResult>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct ModerationResult {
-    categories: Categories,
-    category_scores: CategoryScores,
-    flagged: bool,
+    pub categories: Categories,
+    pub category_scores: CategoryScores,
+    pub flagged: bool,
 }
 
 #[derive(Deserialize, Clone, Debug)]
-struct Categories {
-    hate: bool,
+pub struct Categories {
+    pub hate: bool,
     #[serde(rename = "hate/threatening")]
-    hate_or_threatening: bool,
+    pub hate_or_threatening: bool,
     #[serde(rename = "self-harm")]
-    self_harm: bool,
-    sexual: bool,
+    pub self_harm: bool,
+    pub sexual: bool,
     #[serde(rename = "sexual/minors")]
-    sexual_or_minors: bool,
-    violence: bool,
+    pub sexual_or_minors: bool,
+    pub violence: bool,
     #[serde(rename = "violence/graphic")]
-    violence_or_graphic: bool,
+    pub violence_or_graphic: bool,
 }
 
 #[derive(Deserialize, Clone, Debug)]
-struct CategoryScores {
-    hate: f64,
+pub struct CategoryScores {
+    pub hate: f64,
     #[serde(rename = "hate/threatening")]
-    hate_or_threatening: f64,
+    pub hate_or_threatening: f64,
     #[serde(rename = "self-harm")]
-    self_harm: f64,
-    sexual: f64,
+    pub self_harm: f64,
+    pub sexual: f64,
     #[serde(rename = "sexual/minors")]
-    sexual_or_minors: f64,
-    violence: f64,
+    pub sexual_or_minors: f64,
+    pub violence: f64,
     #[serde(rename = "violence/graphic")]
-    violence_or_graphic: f64,
+    pub violence_or_graphic: f64,
 }
 
 
