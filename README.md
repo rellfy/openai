@@ -54,3 +54,11 @@ and it's not fun making sure all examples accurately reflect the latest version.
 `░░░░░░░░░░` Fine-tunes
 
 `██████████` Moderations
+
+## Sponsors
+
+I've gotten my first monthly sponsor! 🎉
+
+I'm very proud that I can now commit this **Sponsors** section to this README, and this is thanks to [**Arto Bendiken**](https://github.com/artob). Thanks Arto!
+
+I suppose now I better figure out a good way of organizing this section in case I get any more sponsors-
