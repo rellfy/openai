@@ -20,4 +20,4 @@ body:
       label: Alternatives
       description: List any alternatives you've considered as a solution.
       placeholder: We could also [...] or add [...] to fix the problem.
-labels: ["enhancement"]
+labels: [ "enhancement" ]

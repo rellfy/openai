@@ -62,4 +62,4 @@ body:
         - Other
     validations:
       required: true
-labels: ["bug"]
+labels: [ "bug" ]
