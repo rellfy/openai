@@ -14,9 +14,9 @@ pub struct Moderation {
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct ModerationResult {
+    pub flagged: bool,
     pub categories: Categories,
     pub category_scores: CategoryScores,
-    pub flagged: bool,
 }
 
 #[derive(Deserialize, Clone, Copy, Debug)]
