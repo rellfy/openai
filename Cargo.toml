@@ -6,7 +6,7 @@ edition = "2021"
 description = "An unofficial Rust library for the OpenAI API."
 repository = "https://github.com/valentinegb/openai"
 license = "MIT"
-keywords = ["ai", "high-level", "machine-learning", "openai", "library"]
+keywords = ["ai", "machine-learning", "openai", "library"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
