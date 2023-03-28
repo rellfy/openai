@@ -9,7 +9,7 @@ pub mod embeddings;
 pub mod models;
 pub mod moderations;
 
-pub const BASE_URL: &str = "https://api.openai.com/v1/";
+const BASE_URL: &str = "https://api.openai.com/v1/";
 
 static API_KEY: Mutex<String> = Mutex::new(String::new());
 
