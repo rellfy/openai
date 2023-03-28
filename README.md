@@ -4,11 +4,12 @@ An unofficial Rust library for the OpenAI API.
 
 > **Note**
 >
-> The ownership of the `openai` package on crates.io has been transfered to me, Valentine Briese (not the previous owner).
+> The ownership of the `openai` package on crates.io has been transfered to me,
+> Valentine Briese (not the previous owner).
 > This is an entirely different project than the one that was on crates.io as `openai` previously!
 
 > **Warning**
-> 
+>
 > Currently in alpha, I wouldn't recommend using in any production applications.
 > See [Implementation Progress](#implementation-progress).
 
@@ -59,6 +60,7 @@ and it's not fun making sure all examples accurately reflect the latest version.
 
 I've gotten my first monthly sponsor! 🎉
 
-I'm very proud that I can now commit this **Sponsors** section to this README, and this is thanks to [**Arto Bendiken**](https://github.com/artob). Thanks Arto!
+I'm very proud that I can now commit this **Sponsors** section to this README,
+and this is thanks to [**Arto Bendiken**](https://github.com/artob). Thanks Arto!
 
 I suppose now I better figure out a good way of organizing this section in case I get any more sponsors-
