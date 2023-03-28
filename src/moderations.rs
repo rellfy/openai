@@ -1,9 +1,8 @@
 //! Given a input text, outputs if the model classifies it as violating OpenAI's content policy.
 
+use super::{openai_post, ApiResponseOrError};
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
-
-use super::{ApiResponseOrError, openai_post};
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct Moderation {
@@ -49,7 +48,6 @@ pub struct CategoryScores {
     pub violence_graphic: f64,
 }
 
-
 #[derive(Serialize, Builder, Debug, Clone)]
 #[builder(pattern = "owned")]
 #[builder(name = "ModerationBuilder")]
@@ -82,13 +80,10 @@ impl ModerationBuilder {
 
 #[cfg(test)]
 mod tests {
-    use std::env;
-
-    use dotenvy::dotenv;
-
-    use crate::set_key;
-
     use super::*;
+    use crate::set_key;
+    use dotenvy::dotenv;
+    use std::env;
 
     #[tokio::test]
     async fn moderations() {
@@ -102,7 +97,10 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        assert_eq!(moderation.results.first().unwrap().categories.violence, true);
+        assert_eq!(
+            moderation.results.first().unwrap().categories.violence,
+            true
+        );
         assert_eq!(moderation.results.first().unwrap().flagged, true);
     }
 }
