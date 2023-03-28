@@ -2,12 +2,10 @@ name: crates.io
 
 on:
   release:
-    types: [published]
+    types: [ published ]
 
 env:
   CARGO_TERM_COLOR: always
-  CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
-  OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
 
 jobs:
   publish:
@@ -24,5 +22,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
-      - name: Publish `openai`
-        run: cargo publish --token ${CRATES_TOKEN} -p openai
+      - name: Publish
+        run: cargo publish --token ${CRATES_TOKEN}
+        env:
+          CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
