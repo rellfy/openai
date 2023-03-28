@@ -3,12 +3,16 @@
         {
             "type": "cargo",
             "name": "Check",
-            "cargoArgs": ["check"],
+            "cargoArgs": [
+                "check"
+            ]
         },
         {
             "type": "cargo",
             "name": "Test",
-            "cargoArgs": ["test"],
-        },
+            "cargoArgs": [
+                "test"
+            ]
+        }
     ]
 }
