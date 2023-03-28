@@ -84,6 +84,20 @@ where
     openai_request(Method::POST, route, |request| request.json(json)).await
 }
 
+/// Sets the key for all OpenAI API functions.
+///
+/// ## Examples
+///
+/// Use environment variable `OPENAI_KEY` defined from `.env` file:
+///
+/// ```rust
+/// use openai::set_key;
+/// use dotenvy::dotenv;
+/// use std::env;
+///
+/// dotenv().ok();
+/// set_key(env::var("OPENAI_KEY").unwrap());
+/// ```
 pub fn set_key(value: String) {
     *API_KEY.lock().unwrap() = value;
 }
