@@ -324,4 +324,45 @@ mod tests {
             "Hello there! How can I assist you today?"
         );
     }
+
+    #[tokio::test]
+    async fn chat_stream() {
+        dotenv().ok();
+        set_key(env::var("OPENAI_KEY").unwrap());
+
+        let chat_stream = ChatCompletion::builder(
+            "gpt-3.5-turbo",
+            [ChatCompletionMessage {
+                role: ChatCompletionMessageRole::User,
+                content: "Hello!".to_string(),
+                name: None,
+            }],
+        )
+        .temperature(0.0)
+        .create_stream()
+        .await
+        .unwrap();
+
+        let chat_completion = stream_to_completion(chat_stream).await;
+
+        assert_eq!(
+            chat_completion.choices.first().unwrap().message.content,
+            "Hello there! How can I assist you today?"
+        );
+    }
+
+    async fn stream_to_completion(
+        mut chat_stream: Receiver<ChatCompletionDelta>,
+    ) -> ChatCompletion {
+        let mut merged: Option<ChatCompletionDelta> = None;
+        while let Some(delta) = chat_stream.recv().await {
+            match merged.as_mut() {
+                Some(c) => {
+                    c.merge(delta).unwrap();
+                }
+                None => merged = Some(delta),
+            };
+        }
+        merged.unwrap().into()
+    }
 }
