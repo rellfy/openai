@@ -162,6 +162,76 @@ impl ChatCompletionDelta {
             tokio::spawn(forward_deserialized_chat_response_stream(stream, tx)),
         ))
     }
+
+    /// Merges the input delta completion into `self`.
+    pub fn merge(
+        &mut self,
+        mut other: ChatCompletionDelta,
+    ) -> Result<(), ChatCompletionDeltaMergeError> {
+        if other.id.ne(&self.id) {
+            return Err(ChatCompletionDeltaMergeError::DifferentCompletionIds);
+        }
+        for other_choice in other.choices.iter() {
+            for choice in self.choices.iter_mut() {
+                if choice.index != other_choice.index {
+                    continue;
+                }
+                choice.merge(other_choice)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl ChatCompletionChoiceDelta {
+    pub fn merge(
+        &mut self,
+        other: &ChatCompletionChoiceDelta,
+    ) -> Result<(), ChatCompletionDeltaMergeError> {
+        if self.index != other.index {
+            return Err(ChatCompletionDeltaMergeError::DifferentCompletionChoiceIndices);
+        }
+        if self.delta.role.is_none() {
+            if let Some(other_role) = other.delta.role {
+                // Set role to other_role.
+                self.delta.role = Some(other_role);
+            }
+        }
+        if self.delta.name.is_none() {
+            if let Some(other_name) = &other.delta.name {
+                // Set name to other_name.
+                self.delta.name = Some(other_name.clone());
+            }
+        }
+        // Merge contents.
+        match self.delta.content.as_mut() {
+            Some(content) => {
+                match &other.delta.content {
+                    Some(other_content) => {
+                        // Push other content into this one.
+                        content.push_str(other_content)
+                    }
+                    None => {}
+                }
+            }
+            None => {
+                match &other.delta.content {
+                    Some(other_content) => {
+                        // Set this content to other content.
+                        self.delta.content = Some(other_content.clone());
+                    }
+                    None => {}
+                }
+            }
+        };
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub enum ChatCompletionDeltaMergeError {
+    DifferentCompletionIds,
+    DifferentCompletionChoiceIndices,
 }
 
 async fn forward_deserialized_chat_response_stream(
