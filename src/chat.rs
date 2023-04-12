@@ -1,25 +1,44 @@
 //! Given a chat conversation, the model will return a chat completion response.
 
 use super::{openai_post, ApiResponseOrError, Usage};
+use crate::{openai_request_stream, StreamError};
 use derive_builder::Builder;
+use futures_util::StreamExt;
+use reqwest::{Method, Response};
+use reqwest_eventsource::{Event, EventSource};
+use serde::de::Unexpected::Str;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::collections::HashMap;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::task::JoinHandle;
 
-#[derive(Deserialize, Clone)]
-pub struct ChatCompletion {
+pub type ChatCompletion = ChatCompletionGeneric<ChatCompletionChoice>;
+
+pub type ChatCompletionDelta = ChatCompletionGeneric<ChatCompletionChoiceDelta>;
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct ChatCompletionGeneric<C> {
     pub id: String,
     pub object: String,
     pub created: u64,
     pub model: String,
-    pub choices: Vec<ChatCompletionChoice>,
+    pub choices: Vec<C>,
     pub usage: Option<Usage>,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct ChatCompletionChoice {
     pub index: u64,
-    pub message: ChatCompletionMessage,
     pub finish_reason: String,
+    pub message: ChatCompletionMessage,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct ChatCompletionChoiceDelta {
+    pub index: u64,
+    pub finish_reason: Option<String>,
+    pub delta: ChatCompletionMessageDelta,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -28,6 +47,18 @@ pub struct ChatCompletionMessage {
     pub role: ChatCompletionMessageRole,
     /// The contents of the message
     pub content: String,
+    /// The name of the user in a multi-user chat
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+}
+
+/// Same as ChatCompletionMessage, but received during a response stream.
+#[derive(Deserialize, Clone, Debug)]
+pub struct ChatCompletionMessageDelta {
+    /// The role of the author of this message.
+    pub role: Option<ChatCompletionMessageRole>,
+    /// The contents of the message
+    pub content: Option<String>,
     /// The name of the user in a multi-user chat
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -67,9 +98,7 @@ pub struct ChatCompletionRequest {
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     n: Option<u8>,
-    /// If set, partial message deltas will be sent, like in ChatGPT. Tokens will be sent as data-only [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Event_stream_format)
-    /// as they become available, with the stream terminated by a `data: [DONE]` message.
-    #[builder(setter(skip), default)] // skipped until properly implemented
+    #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     stream: Option<bool>,
     /// Up to 4 sequences where the API will stop generating further tokens.
@@ -104,7 +133,7 @@ pub struct ChatCompletionRequest {
     user: String,
 }
 
-impl ChatCompletion {
+impl<C> ChatCompletionGeneric<C> {
     pub fn builder(
         model: &str,
         messages: impl Into<Vec<ChatCompletionMessage>>,
@@ -113,15 +142,61 @@ impl ChatCompletion {
             .model(model)
             .messages(messages)
     }
+}
 
+impl ChatCompletionGeneric<ChatCompletionChoice> {
     pub async fn create(request: &ChatCompletionRequest) -> ApiResponseOrError<Self> {
         openai_post("chat/completions", request).await
     }
 }
 
+impl ChatCompletionGeneric<ChatCompletionChoiceDelta> {
+    pub async fn create(
+        request: &ChatCompletionRequest,
+    ) -> Result<(Receiver<Self>, JoinHandle<anyhow::Result<()>>), StreamError> {
+        let stream =
+            openai_request_stream(Method::POST, "chat/completions", |r| r.json(request)).await?;
+        let (tx, rx) = channel::<Self>(32);
+        Ok((
+            rx,
+            tokio::spawn(forward_deserialized_chat_response_stream(stream, tx)),
+        ))
+    }
+}
+
+async fn forward_deserialized_chat_response_stream(
+    mut stream: EventSource,
+    tx: Sender<ChatCompletionDelta>,
+) -> anyhow::Result<()> {
+    while let Some(event) = stream.next().await {
+        let event = event?;
+        match event {
+            Event::Message(event) => {
+                let completion = serde_json::from_str::<ChatCompletionDelta>(&event.data)?;
+                tx.send(completion).await?;
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 impl ChatCompletionBuilder {
     pub async fn create(self) -> ApiResponseOrError<ChatCompletion> {
         ChatCompletion::create(&self.build().unwrap()).await
+    }
+
+    pub async fn create_stream(
+        mut self,
+    ) -> Result<
+        (
+            Receiver<ChatCompletionDelta>,
+            JoinHandle<anyhow::Result<()>>,
+        ),
+        StreamError,
+    > {
+        self.stream = Some(Some(true));
+        ChatCompletionDelta::create(&self.build().unwrap()).await
     }
 }
 
