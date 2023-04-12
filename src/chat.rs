@@ -228,6 +228,34 @@ impl ChatCompletionChoiceDelta {
     }
 }
 
+impl From<ChatCompletionDelta> for ChatCompletion {
+    fn from(delta: ChatCompletionDelta) -> Self {
+        ChatCompletion {
+            id: delta.id,
+            object: delta.object,
+            created: delta.created,
+            model: delta.model,
+            usage: delta.usage,
+            choices: delta
+                .choices
+                .iter()
+                .map(|choice| ChatCompletionChoice {
+                    index: choice.index,
+                    finish_reason: clone_default_unwrapped_option_string(&choice.finish_reason),
+                    message: ChatCompletionMessage {
+                        role: choice
+                            .delta
+                            .role
+                            .unwrap_or_else(|| ChatCompletionMessageRole::System),
+                        content: clone_default_unwrapped_option_string(&choice.delta.content),
+                        name: choice.delta.name.clone(),
+                    },
+                })
+                .collect(),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum ChatCompletionDeltaMergeError {
     DifferentCompletionIds,
@@ -267,6 +295,13 @@ impl ChatCompletionBuilder {
     > {
         self.stream = Some(Some(true));
         ChatCompletionDelta::create(&self.build().unwrap()).await
+    }
+}
+
+fn clone_default_unwrapped_option_string(string: &Option<String>) -> String {
+    match string {
+        Some(value) => value.clone(),
+        None => "".to_string(),
     }
 }
 
