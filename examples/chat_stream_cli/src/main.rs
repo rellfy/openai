@@ -2,7 +2,7 @@ use dotenvy::dotenv;
 use openai::chat::{ChatCompletion, ChatCompletionDelta};
 use openai::{
     chat::{ChatCompletionMessage, ChatCompletionMessageRole},
-    set_key, StreamError,
+    set_key,
 };
 use std::{
     env,
@@ -11,7 +11,7 @@ use std::{
 use tokio::sync::mpsc::Receiver;
 
 #[tokio::main]
-async fn main() -> Result<(), StreamError> {
+async fn main() {
     // Make sure you have a file named `.env` with the `OPENAI_KEY` environment variable defined!
     dotenv().unwrap();
     set_key(env::var("OPENAI_KEY").unwrap());
@@ -37,7 +37,8 @@ async fn main() -> Result<(), StreamError> {
 
         let chat_stream = ChatCompletionDelta::builder("gpt-3.5-turbo", messages.clone())
             .create_stream()
-            .await?;
+            .await
+            .unwrap();
 
         let chat_completion: ChatCompletion = listen_for_tokens(chat_stream).await;
         let returned_message = chat_completion.choices.first().unwrap().message.clone();
