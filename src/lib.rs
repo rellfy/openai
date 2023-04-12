@@ -1,5 +1,5 @@
 use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder};
-use reqwest_eventsource::{EventSource, RequestBuilderExt};
+use reqwest_eventsource::{CannotCloneRequestError, EventSource, RequestBuilderExt};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::sync::Mutex;
 
@@ -70,16 +70,11 @@ where
     }
 }
 
-#[derive(Debug)]
-pub enum StreamError {
-    Error,
-}
-
 async fn openai_request_stream<F>(
     method: Method,
     route: &str,
     builder: F,
-) -> Result<EventSource, StreamError>
+) -> Result<EventSource, CannotCloneRequestError>
 where
     F: FnOnce(RequestBuilder) -> RequestBuilder,
 {
@@ -90,8 +85,7 @@ where
 
     let stream = request
         .header(AUTHORIZATION, format!("Bearer {}", API_KEY.lock().unwrap()))
-        .eventsource()
-        .map_err(|_| StreamError::Error)?;
+        .eventsource()?;
 
     Ok(stream)
 }

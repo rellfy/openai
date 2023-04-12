@@ -1,15 +1,14 @@
 //! Given a chat conversation, the model will return a chat completion response.
 
 use super::{openai_post, ApiResponseOrError, Usage};
-use crate::{openai_request_stream, StreamError};
+use crate::openai_request_stream;
 use derive_builder::Builder;
 use futures_util::StreamExt;
 use reqwest::Method;
-use reqwest_eventsource::{Event, EventSource};
+use reqwest_eventsource::{CannotCloneRequestError, Event, EventSource};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
-use tokio::task::JoinHandle;
 
 /// A full chat completion.
 pub type ChatCompletion = ChatCompletionGeneric<ChatCompletionChoice>;
@@ -151,7 +150,9 @@ impl ChatCompletion {
 }
 
 impl ChatCompletionDelta {
-    pub async fn create(request: &ChatCompletionRequest) -> Result<Receiver<Self>, StreamError> {
+    pub async fn create(
+        request: &ChatCompletionRequest,
+    ) -> Result<Receiver<Self>, CannotCloneRequestError> {
         let stream =
             openai_request_stream(Method::POST, "chat/completions", |r| r.json(request)).await?;
         let (tx, rx) = channel::<Self>(32);
@@ -280,7 +281,9 @@ impl ChatCompletionBuilder {
         ChatCompletion::create(&self.build().unwrap()).await
     }
 
-    pub async fn create_stream(mut self) -> Result<Receiver<ChatCompletionDelta>, StreamError> {
+    pub async fn create_stream(
+        mut self,
+    ) -> Result<Receiver<ChatCompletionDelta>, CannotCloneRequestError> {
         self.stream = Some(Some(true));
         ChatCompletionDelta::create(&self.build().unwrap()).await
     }
