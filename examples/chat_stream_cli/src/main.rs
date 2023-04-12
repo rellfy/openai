@@ -1,5 +1,5 @@
 use dotenvy::dotenv;
-use openai::chat::ChatCompletionDelta;
+use openai::chat::{ChatCompletion, ChatCompletionDelta};
 use openai::{
     chat::{ChatCompletionGeneric, ChatCompletionMessage, ChatCompletionMessageRole},
     set_key, StreamError,
@@ -40,15 +40,20 @@ async fn main() -> Result<(), StreamError> {
                 .create_stream()
                 .await?;
 
-        tokio::join!(listen_for_tokens(chat_stream), listener);
-
-        // messages.push(returned_message);
+        tokio::select! {
+            chat_completion = listen_for_tokens(chat_stream) => {
+                let returned_message = chat_completion.choices.first().unwrap().message.clone();
+                messages.push(returned_message);
+            },
+            _ = listener => {}
+        }
     }
 }
 
-async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) {
-    while let Some(completion) = chat_stream.recv().await {
-        let choice = &completion.choices[0];
+async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) -> ChatCompletion {
+    let mut full_completion: Option<ChatCompletionDelta> = None;
+    while let Some(delta) = chat_stream.recv().await {
+        let choice = &delta.choices[0];
         if let Some(role) = &choice.delta.role {
             print!("{:#?}: ", role);
         }
@@ -60,5 +65,13 @@ async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) {
             print!("\n");
         }
         stdout().flush();
+        // Merge completion into accrued.
+        match full_completion.as_mut() {
+            Some(c) => {
+                c.merge(delta);
+            }
+            None => full_completion = Some(delta),
+        };
     }
+    full_completion.unwrap().into()
 }
