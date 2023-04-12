@@ -13,8 +13,10 @@ use std::collections::HashMap;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::task::JoinHandle;
 
+/// A full chat completion.
 pub type ChatCompletion = ChatCompletionGeneric<ChatCompletionChoice>;
 
+/// A delta chat completion, which is streamed token by token.
 pub type ChatCompletionDelta = ChatCompletionGeneric<ChatCompletionChoiceDelta>;
 
 #[derive(Deserialize, Clone, Debug)]
@@ -144,13 +146,13 @@ impl<C> ChatCompletionGeneric<C> {
     }
 }
 
-impl ChatCompletionGeneric<ChatCompletionChoice> {
+impl ChatCompletion {
     pub async fn create(request: &ChatCompletionRequest) -> ApiResponseOrError<Self> {
         openai_post("chat/completions", request).await
     }
 }
 
-impl ChatCompletionGeneric<ChatCompletionChoiceDelta> {
+impl ChatCompletionDelta {
     pub async fn create(
         request: &ChatCompletionRequest,
     ) -> Result<(Receiver<Self>, JoinHandle<anyhow::Result<()>>), StreamError> {
