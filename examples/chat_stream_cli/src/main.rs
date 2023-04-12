@@ -35,23 +35,19 @@ async fn main() -> Result<(), StreamError> {
             name: None,
         });
 
-        let (chat_stream, listener) =
-            ChatCompletionDelta::builder("gpt-3.5-turbo", messages.clone())
-                .create_stream()
-                .await?;
+        let chat_stream = ChatCompletionDelta::builder("gpt-3.5-turbo", messages.clone())
+            .create_stream()
+            .await?;
 
-        tokio::select! {
-            chat_completion = listen_for_tokens(chat_stream) => {
-                let returned_message = chat_completion.choices.first().unwrap().message.clone();
-                messages.push(returned_message);
-            },
-            _ = listener => {}
-        }
+        let chat_completion: ChatCompletion = listen_for_tokens(chat_stream).await;
+        let returned_message = chat_completion.choices.first().unwrap().message.clone();
+
+        messages.push(returned_message);
     }
 }
 
 async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) -> ChatCompletion {
-    let mut full_completion: Option<ChatCompletionDelta> = None;
+    let mut merged: Option<ChatCompletionDelta> = None;
     while let Some(delta) = chat_stream.recv().await {
         let choice = &delta.choices[0];
         if let Some(role) = &choice.delta.role {
@@ -66,12 +62,12 @@ async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) -> Ch
         }
         stdout().flush().unwrap();
         // Merge completion into accrued.
-        match full_completion.as_mut() {
+        match merged.as_mut() {
             Some(c) => {
                 c.merge(delta).unwrap();
             }
-            None => full_completion = Some(delta),
+            None => merged = Some(delta),
         };
     }
-    full_completion.unwrap().into()
+    merged.unwrap().into()
 }

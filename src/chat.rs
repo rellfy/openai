@@ -151,16 +151,12 @@ impl ChatCompletion {
 }
 
 impl ChatCompletionDelta {
-    pub async fn create(
-        request: &ChatCompletionRequest,
-    ) -> Result<(Receiver<Self>, JoinHandle<anyhow::Result<()>>), StreamError> {
+    pub async fn create(request: &ChatCompletionRequest) -> Result<Receiver<Self>, StreamError> {
         let stream =
             openai_request_stream(Method::POST, "chat/completions", |r| r.json(request)).await?;
         let (tx, rx) = channel::<Self>(32);
-        Ok((
-            rx,
-            tokio::spawn(forward_deserialized_chat_response_stream(stream, tx)),
-        ))
+        tokio::spawn(forward_deserialized_chat_response_stream(stream, tx));
+        Ok(rx)
     }
 
     /// Merges the input delta completion into `self`.
@@ -284,15 +280,7 @@ impl ChatCompletionBuilder {
         ChatCompletion::create(&self.build().unwrap()).await
     }
 
-    pub async fn create_stream(
-        mut self,
-    ) -> Result<
-        (
-            Receiver<ChatCompletionDelta>,
-            JoinHandle<anyhow::Result<()>>,
-        ),
-        StreamError,
-    > {
+    pub async fn create_stream(mut self) -> Result<Receiver<ChatCompletionDelta>, StreamError> {
         self.stream = Some(Some(true));
         ChatCompletionDelta::create(&self.build().unwrap()).await
     }
