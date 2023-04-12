@@ -46,7 +46,8 @@ pub enum ChatCompletionMessageRole {
 #[builder(name = "ChatCompletionBuilder")]
 #[builder(setter(strip_option, into))]
 pub struct ChatCompletionRequest {
-    /// ID of the model to use. Currently, only `gpt-3.5-turbo` and `gpt-3.5-turbo-0301` are supported.
+    /// ID of the model to use. Currently, only `gpt-3.5-turbo`, `gpt-3.5-turbo-0301` and `gpt-4`
+    /// are supported.
     model: String,
     /// The messages to generate chat completions for, in the [chat format](https://platform.openai.com/docs/guides/chat/introduction).
     messages: Vec<ChatCompletionMessage>,
