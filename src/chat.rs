@@ -166,7 +166,7 @@ impl ChatCompletionDelta {
     /// Merges the input delta completion into `self`.
     pub fn merge(
         &mut self,
-        mut other: ChatCompletionDelta,
+        other: ChatCompletionDelta,
     ) -> Result<(), ChatCompletionDeltaMergeError> {
         if other.id.ne(&self.id) {
             return Err(ChatCompletionDeltaMergeError::DifferentCompletionIds);

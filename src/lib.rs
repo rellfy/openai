@@ -1,6 +1,5 @@
 use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder};
-use reqwest_eventsource::{Event, EventSource, RequestBuilderExt};
-use serde::de::Unexpected::Str;
+use reqwest_eventsource::{EventSource, RequestBuilderExt};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::sync::Mutex;
 

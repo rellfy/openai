@@ -1,7 +1,7 @@
 use dotenvy::dotenv;
 use openai::chat::{ChatCompletion, ChatCompletionDelta};
 use openai::{
-    chat::{ChatCompletionGeneric, ChatCompletionMessage, ChatCompletionMessageRole},
+    chat::{ChatCompletionMessage, ChatCompletionMessageRole},
     set_key, StreamError,
 };
 use std::{
@@ -35,7 +35,7 @@ async fn main() -> Result<(), StreamError> {
             name: None,
         });
 
-        let (mut chat_stream, listener) =
+        let (chat_stream, listener) =
             ChatCompletionDelta::builder("gpt-3.5-turbo", messages.clone())
                 .create_stream()
                 .await?;
@@ -60,15 +60,15 @@ async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) -> Ch
         if let Some(content) = &choice.delta.content {
             print!("{}", content);
         }
-        if let Some(finish_reason) = &choice.finish_reason {
+        if let Some(_) = &choice.finish_reason {
             // The message being streamed has been fully received.
             print!("\n");
         }
-        stdout().flush();
+        stdout().flush().unwrap();
         // Merge completion into accrued.
         match full_completion.as_mut() {
             Some(c) => {
-                c.merge(delta);
+                c.merge(delta).unwrap();
             }
             None => full_completion = Some(delta),
         };
