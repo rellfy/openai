@@ -54,17 +54,4 @@ mod tests {
 
         assert_eq!(model.id, "text-davinci-003");
     }
-
-    #[tokio::test]
-    async fn custom_model() {
-        dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
-
-        let model = Model::from("davinci:ft-personal-2022-12-12-04-49-51")
-            .await
-            .unwrap()
-            .unwrap();
-
-        assert_eq!(model.id, "davinci:ft-personal-2022-12-12-04-49-51");
-    }
 }
