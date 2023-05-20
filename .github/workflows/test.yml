@@ -1,15 +1,12 @@
-name: Rust
-
+name: Test
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request_target:
-    branches: [ "main" ]
-
+    branches: [ "master" ]
 env:
   CARGO_TERM_COLOR: always
   OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
-
 jobs:
   build:
     runs-on: ubuntu-latest
