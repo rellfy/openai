@@ -1,10 +1,10 @@
 [package]
 name = "openai"
 version = "1.0.0-alpha.9"
-authors = ["valentinegb", "Lorenzo Fontoura <lorenzo@nioel.com>"]
+authors = ["Lorenzo Fontoura <lorenzo@nioel.com>", "valentinegb"]
 edition = "2021"
 description = "An unofficial Rust library for the OpenAI API."
-repository = "https://github.com/valentinegb/openai"
+repository = "https://github.com/rellfy/openai"
 license = "MIT"
 keywords = ["ai", "machine-learning", "openai", "library"]
 
