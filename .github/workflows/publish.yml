@@ -1,12 +1,9 @@
-name: crates.io
-
+name: Publish
 on:
   release:
-    types: [ published ]
-
+    types: [created]
 env:
   CARGO_TERM_COLOR: always
-
 jobs:
   publish:
     name: Publish to crates.io
