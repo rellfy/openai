@@ -1,14 +1,12 @@
 [package]
 name = "openai"
-version = "1.0.0-alpha.8"
-authors = ["valentinegb"]
+version = "1.0.0-alpha.9"
+authors = ["valentinegb", "Lorenzo Fontoura <lorenzo@nioel.com>"]
 edition = "2021"
 description = "An unofficial Rust library for the OpenAI API."
 repository = "https://github.com/valentinegb/openai"
 license = "MIT"
 keywords = ["ai", "machine-learning", "openai", "library"]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 serde_json = "1.0.94"
