@@ -11,6 +11,7 @@ pub mod embeddings;
 pub mod files;
 pub mod models;
 pub mod moderations;
+pub mod files;
 
 const BASE_URL: &str = "https://api.openai.com/v1/";
 
