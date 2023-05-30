@@ -1,0 +1,3 @@
+{"prompt": "example data: the most correct data\n###\n", "completion":  "yes"}
+{"prompt": "example data: totally wrong data\n###\n", "completion":  "no"}
+{"prompt": "example data: very correct data\n###\n", "completion":  "yes"}

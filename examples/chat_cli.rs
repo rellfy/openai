@@ -1,11 +1,13 @@
-use dotenvy::dotenv;
-use openai::{
-    chat::{ChatCompletion, ChatCompletionMessage, ChatCompletionMessageRole},
-    set_key,
-};
 use std::{
     env,
     io::{stdin, stdout, Write},
+};
+
+use dotenvy::dotenv;
+
+use openai::{
+    chat::{ChatCompletion, ChatCompletionMessage, ChatCompletionMessageRole},
+    set_key,
 };
 
 #[tokio::main]
@@ -21,7 +23,7 @@ async fn main() {
     }];
 
     loop {
-        print!("User: ");
+        print!("User[{}]: ", messages.len());
         stdout().flush().unwrap();
 
         let mut user_message_content = String::new();
