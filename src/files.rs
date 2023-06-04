@@ -1,9 +1,12 @@
-use super::ApiResponseOrError;
-use crate::{openai_delete, openai_get, openai_post_multipart, OpenAiError};
+use std::path::{Path, PathBuf};
+
 use derive_builder::Builder;
 use reqwest::multipart::{Form, Part};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+
+use crate::{openai_delete, openai_get, openai_post_multipart, OpenAiError};
+
+use super::ApiResponseOrError;
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct File {
@@ -33,35 +36,34 @@ pub struct Files {
 #[builder(name = "FileUploadBuilder")]
 #[builder(setter(strip_option, into))]
 pub struct FileUploadRequest {
-    filename: String,
+    file_name: String,
     purpose: String,
 }
 
 impl File {
     async fn create(request: &FileUploadRequest) -> ApiResponseOrError<Self> {
         let purpose = request.purpose.clone();
-        let upload_filepath = Path::new(request.filename.as_str());
-        let upload_filepath = upload_filepath.canonicalize().unwrap();
-        if !upload_filepath.exists() {
-            return Ok(Err(OpenAiError {
-                message: format!("File {} not found", upload_filepath.display()),
-                error_type: "internal".to_string(),
-                param: None,
-                code: None,
-            }));
+        let upload_file_path = Path::new(request.file_name.as_str());
+        let upload_file_path = upload_file_path.canonicalize().unwrap();
+        if !upload_file_path.exists() {
+            return Ok(Err(file_not_found_error(&upload_file_path)));
         }
-        let simple_name = upload_filepath
+        let simple_name = upload_file_path
             .file_name()
             .unwrap()
             .to_str()
             .unwrap()
             .to_string()
             .clone();
-        let async_file = tokio::fs::File::open(upload_filepath).await.unwrap();
+        let async_file = match tokio::fs::File::open(upload_file_path).await {
+            Ok(f) => f,
+            Err(e) => {
+                return Ok(Err(io_error(e)));
+            }
+        };
         let file_part = Part::stream(async_file)
             .file_name(simple_name)
-            .mime_str("application/jsonl")
-            .unwrap();
+            .mime_str("application/jsonl")?;
         let form = Form::new().part("file", file_part).text("purpose", purpose);
         openai_post_multipart("files", form).await
     }
@@ -72,6 +74,24 @@ impl File {
 
     pub async fn delete(id: &str) -> ApiResponseOrError<DeletedFile> {
         openai_delete(format!("files/{}", id).as_str()).await
+    }
+}
+
+fn file_not_found_error(file_path: &PathBuf) -> OpenAiError {
+    OpenAiError {
+        message: format!("File {} not found", file_path.display()),
+        error_type: "internal".to_string(),
+        param: None,
+        code: None,
+    }
+}
+
+fn io_error(err: std::io::Error) -> OpenAiError {
+    OpenAiError {
+        message: format!("IO Error {}", err.to_string()),
+        error_type: "internal".to_string(),
+        param: None,
+        code: None,
     }
 }
 
@@ -89,15 +109,18 @@ impl Files {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::set_key;
-    use dotenvy::dotenv;
     use std::env;
     use std::time::Duration;
 
+    use dotenvy::dotenv;
+
+    use crate::set_key;
+
+    use super::*;
+
     fn test_upload_builder() -> FileUploadBuilder {
         File::builder()
-            .filename("test_data/file_upload_test1.jsonl")
+            .file_name("test_data/file_upload_test1.jsonl")
             .purpose("fine-tune")
     }
 
@@ -156,16 +179,16 @@ mod tests {
     }
 
     #[test]
-    fn filename_path_test() {
+    fn file_name_path_test() {
         let request = test_upload_request();
-        let file_upload_path = Path::new(request.filename.as_str());
-        let filename = file_upload_path
+        let file_upload_path = Path::new(request.file_name.as_str());
+        let file_name = file_upload_path
             .clone()
             .file_name()
             .unwrap()
             .to_str()
             .unwrap();
-        assert_eq!(filename, "file_upload_test1.jsonl");
+        assert_eq!(file_name, "file_upload_test1.jsonl");
         let file_upload_path = file_upload_path.canonicalize().unwrap();
         let file_exists = file_upload_path.exists();
         assert!(file_exists)

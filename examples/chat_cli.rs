@@ -23,7 +23,7 @@ async fn main() {
     }];
 
     loop {
-        print!("User[{}]: ", messages.len());
+        print!("User: ");
         stdout().flush().unwrap();
 
         let mut user_message_content = String::new();
