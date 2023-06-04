@@ -94,7 +94,6 @@ mod tests {
             .model("text-moderation-latest")
             .create()
             .await
-            .unwrap()
             .unwrap();
 
         assert_eq!(

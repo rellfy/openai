@@ -1,8 +1,9 @@
+use std::sync::Mutex;
+
 use reqwest::multipart::Form;
 use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder};
 use reqwest_eventsource::{CannotCloneRequestError, EventSource, RequestBuilderExt};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::sync::Mutex;
 
 pub mod chat;
 pub mod completions;
@@ -23,6 +24,17 @@ pub struct OpenAiError {
     pub error_type: String,
     pub param: Option<String>,
     pub code: Option<String>,
+}
+
+impl OpenAiError {
+    fn new(message: String, error_type: String) -> OpenAiError {
+        OpenAiError {
+            message,
+            error_type,
+            param: None,
+            code: None,
+        }
+    }
 }
 
 impl std::fmt::Display for OpenAiError {
@@ -47,7 +59,19 @@ pub struct Usage {
     pub total_tokens: u32,
 }
 
-type ApiResponseOrError<T> = Result<Result<T, OpenAiError>, reqwest::Error>;
+type ApiResponseOrError<T> = Result<T, OpenAiError>;
+
+impl From<reqwest::Error> for OpenAiError {
+    fn from(value: reqwest::Error) -> Self {
+        OpenAiError::new(value.to_string(), "reqwest".to_string())
+    }
+}
+
+impl From<std::io::Error> for OpenAiError {
+    fn from(value: std::io::Error) -> Self {
+        OpenAiError::new(value.to_string(), "io".to_string())
+    }
+}
 
 async fn openai_request<F, T>(method: Method, route: &str, builder: F) -> ApiResponseOrError<T>
 where
@@ -67,8 +91,8 @@ where
         .await?;
 
     match api_response {
-        ApiResponse::Ok(t) => Ok(Ok(t)),
-        ApiResponse::Err { error } => Ok(Err(error)),
+        ApiResponse::Ok(t) => Ok(t),
+        ApiResponse::Err { error } => Err(error),
     }
 }
 

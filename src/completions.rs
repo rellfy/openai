@@ -181,7 +181,6 @@ mod tests {
             .temperature(0.0)
             .create()
             .await
-            .unwrap()
             .unwrap();
 
         assert_eq!(
