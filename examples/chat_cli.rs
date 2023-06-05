@@ -1,11 +1,13 @@
-use dotenvy::dotenv;
-use openai::{
-    chat::{ChatCompletion, ChatCompletionMessage, ChatCompletionMessageRole},
-    set_key,
-};
 use std::{
     env,
     io::{stdin, stdout, Write},
+};
+
+use dotenvy::dotenv;
+
+use openai::{
+    chat::{ChatCompletion, ChatCompletionMessage, ChatCompletionMessageRole},
+    set_key,
 };
 
 #[tokio::main]

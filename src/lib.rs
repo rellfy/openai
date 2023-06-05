@@ -1,3 +1,4 @@
+use reqwest::multipart::Form;
 use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder};
 use reqwest_eventsource::{CannotCloneRequestError, EventSource, RequestBuilderExt};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -7,6 +8,7 @@ pub mod chat;
 pub mod completions;
 pub mod edits;
 pub mod embeddings;
+pub mod files;
 pub mod models;
 pub mod moderations;
 
@@ -97,12 +99,26 @@ where
     openai_request(Method::GET, route, |request| request).await
 }
 
+async fn openai_delete<T>(route: &str) -> ApiResponseOrError<T>
+where
+    T: DeserializeOwned,
+{
+    openai_request(Method::DELETE, route, |request| request).await
+}
+
 async fn openai_post<J, T>(route: &str, json: &J) -> ApiResponseOrError<T>
 where
     J: Serialize + ?Sized,
     T: DeserializeOwned,
 {
     openai_request(Method::POST, route, |request| request.json(json)).await
+}
+
+async fn openai_post_multipart<T>(route: &str, form: Form) -> ApiResponseOrError<T>
+where
+    T: DeserializeOwned,
+{
+    openai_request(Method::POST, route, |request| request.multipart(form)).await
 }
 
 /// Sets the key for all OpenAI API functions.
