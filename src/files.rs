@@ -157,7 +157,7 @@ mod tests {
         // ensure at least one file exists
         test_upload_builder().create().await.unwrap();
         // wait to avoid recent upload still processing error
-        tokio::time::sleep(Duration::from_secs(5)).await;
+        tokio::time::sleep(Duration::from_secs(7)).await;
         let openai_files = Files::list().await.unwrap();
         assert!(openai_files.data.len() > 0);
         let mut files = openai_files.data;
