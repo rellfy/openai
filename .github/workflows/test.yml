@@ -29,3 +29,9 @@ jobs:
         run: cargo test --verbose
       - name: Run tests (rustls)
         run: cargo test --verbose --no-default-features --features=rustls
+      - name: Build examples
+        # TODO: build all examples with a single command?
+        run: |
+          cargo build --example chat_cli
+          cargo build --example chat_stream_cli
+          cargo build --example completions_cli
