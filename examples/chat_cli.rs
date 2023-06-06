@@ -38,7 +38,6 @@ async fn main() {
         let chat_completion = ChatCompletion::builder("gpt-3.5-turbo", messages.clone())
             .create()
             .await
-            .unwrap()
             .unwrap();
         let returned_message = chat_completion.choices.first().unwrap().message.clone();
 

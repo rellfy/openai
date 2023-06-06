@@ -65,9 +65,9 @@ impl Edit {
                     edit.choices.push(choice.text.clone());
                 }
 
-                Ok(Ok(edit))
+                Ok(edit)
             }
-            Err(_) => Ok(response),
+            Err(_) => response,
         }
     }
 
@@ -102,7 +102,6 @@ mod tests {
             .temperature(0.0)
             .create()
             .await
-            .unwrap()
             .unwrap();
 
         assert_eq!(

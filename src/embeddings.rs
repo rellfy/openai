@@ -72,12 +72,8 @@ impl Embeddings {
 
 impl Embedding {
     pub async fn create(model: &str, input: &str, user: &str) -> ApiResponseOrError<Self> {
-        let response = Embeddings::create(model, vec![input], user).await?;
-
-        match response {
-            Ok(mut embeddings) => Ok(Ok(embeddings.data.swap_remove(0))),
-            Err(error) => Ok(Err(error)),
-        }
+        let mut embeddings = Embeddings::create(model, vec![input], user).await?;
+        Ok(embeddings.data.swap_remove(0))
     }
 
     pub fn distance(&self, other: &Self) -> f64 {
@@ -111,7 +107,6 @@ mod tests {
             "",
         )
         .await
-        .unwrap()
         .unwrap();
 
         assert!(!embeddings.data.first().unwrap().vec.is_empty());
@@ -128,7 +123,6 @@ mod tests {
             "",
         )
         .await
-        .unwrap()
         .unwrap();
 
         assert!(!embedding.vec.is_empty());

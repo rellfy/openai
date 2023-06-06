@@ -1,10 +1,10 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use derive_builder::Builder;
 use reqwest::multipart::{Form, Part};
 use serde::{Deserialize, Serialize};
 
-use crate::{openai_delete, openai_get, openai_post_multipart, OpenAiError};
+use crate::{openai_delete, openai_get, openai_post_multipart};
 
 use super::ApiResponseOrError;
 
@@ -44,10 +44,7 @@ impl File {
     async fn create(request: &FileUploadRequest) -> ApiResponseOrError<Self> {
         let purpose = request.purpose.clone();
         let upload_file_path = Path::new(request.file_name.as_str());
-        let upload_file_path = upload_file_path.canonicalize().unwrap();
-        if !upload_file_path.exists() {
-            return Ok(Err(file_not_found_error(&upload_file_path)));
-        }
+        let upload_file_path = upload_file_path.canonicalize()?;
         let simple_name = upload_file_path
             .file_name()
             .unwrap()
@@ -55,12 +52,7 @@ impl File {
             .unwrap()
             .to_string()
             .clone();
-        let async_file = match tokio::fs::File::open(upload_file_path).await {
-            Ok(f) => f,
-            Err(e) => {
-                return Ok(Err(io_error(e)));
-            }
-        };
+        let async_file = tokio::fs::File::open(upload_file_path).await?;
         let file_part = Part::stream(async_file)
             .file_name(simple_name)
             .mime_str("application/jsonl")?;
@@ -74,24 +66,6 @@ impl File {
 
     pub async fn delete(id: &str) -> ApiResponseOrError<DeletedFile> {
         openai_delete(format!("files/{}", id).as_str()).await
-    }
-}
-
-fn file_not_found_error(file_path: &PathBuf) -> OpenAiError {
-    OpenAiError {
-        message: format!("File {} not found", file_path.display()),
-        error_type: "internal".to_string(),
-        param: None,
-        code: None,
-    }
-}
-
-fn io_error(err: std::io::Error) -> OpenAiError {
-    OpenAiError {
-        message: format!("IO Error {}", err.to_string()),
-        error_type: "internal".to_string(),
-        param: None,
-        code: None,
     }
 }
 
@@ -132,7 +106,7 @@ mod tests {
     async fn upload_file() {
         dotenv().ok();
         set_key(env::var("OPENAI_KEY").unwrap());
-        let file_upload = test_upload_builder().create().await.unwrap().unwrap();
+        let file_upload = test_upload_builder().create().await.unwrap();
         println!(
             "upload: {}",
             serde_json::to_string_pretty(&file_upload).unwrap()
@@ -141,12 +115,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn missing_file() {
+        dotenv().ok();
+        set_key(env::var("OPENAI_KEY").unwrap());
+        let test_builder = File::builder()
+            .file_name("test_data/missing_file.jsonl")
+            .purpose("fine-tune");
+        let response = test_builder.create().await;
+        assert!(response.is_err());
+        let openapi_err = response.err().unwrap();
+        assert_eq!(openapi_err.error_type, "io");
+        assert_eq!(
+            openapi_err.message,
+            "No such file or directory (os error 2)"
+        )
+    }
+
+    #[tokio::test]
     async fn list_files() {
         dotenv().ok();
         set_key(env::var("OPENAI_KEY").unwrap());
         // ensure at least one file exists
-        test_upload_builder().create().await.unwrap().unwrap();
-        let openai_files = Files::list().await.unwrap().unwrap();
+        test_upload_builder().create().await.unwrap();
+        let openai_files = Files::list().await.unwrap();
         let file_count = openai_files.data.len();
         assert!(file_count > 0);
         for openai_file in &openai_files.data {
@@ -164,15 +155,15 @@ mod tests {
         dotenv().ok();
         set_key(env::var("OPENAI_KEY").unwrap());
         // ensure at least one file exists
-        test_upload_builder().create().await.unwrap().unwrap();
+        test_upload_builder().create().await.unwrap();
         // wait to avoid recent upload still processing error
-        tokio::time::sleep(Duration::from_secs(5)).await;
-        let openai_files = Files::list().await.unwrap().unwrap();
+        tokio::time::sleep(Duration::from_secs(7)).await;
+        let openai_files = Files::list().await.unwrap();
         assert!(openai_files.data.len() > 0);
         let mut files = openai_files.data;
         files.sort_by(|a, b| a.created_at.cmp(&b.created_at));
         for file in files {
-            let deleted_file = File::delete(file.id.as_str()).await.unwrap().unwrap();
+            let deleted_file = File::delete(file.id.as_str()).await.unwrap();
             assert!(deleted_file.deleted);
             println!("deleted: {} {}", deleted_file.id, deleted_file.deleted)
         }

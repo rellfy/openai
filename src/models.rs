@@ -50,7 +50,7 @@ mod tests {
         dotenv().ok();
         set_key(env::var("OPENAI_KEY").unwrap());
 
-        let model = Model::from("text-davinci-003").await.unwrap().unwrap();
+        let model = Model::from("text-davinci-003").await.unwrap();
 
         assert_eq!(model.id, "text-davinci-003");
     }

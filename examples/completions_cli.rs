@@ -20,7 +20,6 @@ async fn main() {
             .max_tokens(1024)
             .create()
             .await
-            .unwrap()
             .unwrap();
 
         let response = &completion.choices.first().unwrap().text;
