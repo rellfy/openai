@@ -8,7 +8,8 @@ env:
   CARGO_TERM_COLOR: always
   OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
 jobs:
-  build:
+  build-library:
+    name: Build library
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -29,6 +30,22 @@ jobs:
         run: cargo test --verbose
       - name: Run tests (rustls)
         run: cargo test --verbose --no-default-features --features=rustls
+  build-examples:
+    name: Build examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
       - name: Build examples
         # TODO: build all examples with a single command?
         run: |
