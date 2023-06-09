@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use reqwest::multipart::Form;
-use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder};
+use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder, Response};
 use reqwest_eventsource::{CannotCloneRequestError, EventSource, RequestBuilderExt};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -59,7 +59,7 @@ pub struct Usage {
     pub total_tokens: u32,
 }
 
-type ApiResponseOrError<T> = Result<T, OpenAiError>;
+pub type ApiResponseOrError<T> = Result<T, OpenAiError>;
 
 impl From<reqwest::Error> for OpenAiError {
     fn from(value: reqwest::Error) -> Self {
@@ -73,27 +73,32 @@ impl From<std::io::Error> for OpenAiError {
     }
 }
 
-async fn openai_request<F, T>(method: Method, route: &str, builder: F) -> ApiResponseOrError<T>
+async fn openai_request_json<F, T>(method: Method, route: &str, builder: F) -> ApiResponseOrError<T>
 where
     F: FnOnce(RequestBuilder) -> RequestBuilder,
     T: DeserializeOwned,
+{
+    let api_response = openai_request(method, route, builder).await?.json().await?;
+    match api_response {
+        ApiResponse::Ok(t) => Ok(t),
+        ApiResponse::Err { error } => Err(error),
+    }
+}
+
+async fn openai_request<F>(method: Method, route: &str, builder: F) -> ApiResponseOrError<Response>
+where
+    F: FnOnce(RequestBuilder) -> RequestBuilder,
 {
     let client = Client::new();
     let mut request = client.request(method, BASE_URL.to_owned() + route);
 
     request = builder(request);
 
-    let api_response: ApiResponse<T> = request
+    let response = request
         .header(AUTHORIZATION, format!("Bearer {}", API_KEY.lock().unwrap()))
         .send()
-        .await?
-        .json()
         .await?;
-
-    match api_response {
-        ApiResponse::Ok(t) => Ok(t),
-        ApiResponse::Err { error } => Err(error),
-    }
+    Ok(response)
 }
 
 async fn openai_request_stream<F>(
@@ -120,14 +125,14 @@ async fn openai_get<T>(route: &str) -> ApiResponseOrError<T>
 where
     T: DeserializeOwned,
 {
-    openai_request(Method::GET, route, |request| request).await
+    openai_request_json(Method::GET, route, |request| request).await
 }
 
 async fn openai_delete<T>(route: &str) -> ApiResponseOrError<T>
 where
     T: DeserializeOwned,
 {
-    openai_request(Method::DELETE, route, |request| request).await
+    openai_request_json(Method::DELETE, route, |request| request).await
 }
 
 async fn openai_post<J, T>(route: &str, json: &J) -> ApiResponseOrError<T>
@@ -135,14 +140,14 @@ where
     J: Serialize + ?Sized,
     T: DeserializeOwned,
 {
-    openai_request(Method::POST, route, |request| request.json(json)).await
+    openai_request_json(Method::POST, route, |request| request.json(json)).await
 }
 
 async fn openai_post_multipart<T>(route: &str, form: Form) -> ApiResponseOrError<T>
 where
     T: DeserializeOwned,
 {
-    openai_request(Method::POST, route, |request| request.multipart(form)).await
+    openai_request_json(Method::POST, route, |request| request.multipart(form)).await
 }
 
 /// Sets the key for all OpenAI API functions.
