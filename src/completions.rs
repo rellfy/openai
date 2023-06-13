@@ -107,7 +107,7 @@ pub struct CompletionRequest {
     /// [See more information about frequency and presence penalties](https://beta.openai.com/docs/api-reference/parameter-details).
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default)]
-    pub presence_penalty: Option<i8>,
+    pub presence_penalty: Option<f32>,
     /// Number between -2.0 and 2.0.
     /// Positive values penalize new tokens based on their existing frequency in the text so far,
     /// decreasing the model's likelihood to repeat the same line verbatim.
@@ -115,7 +115,7 @@ pub struct CompletionRequest {
     /// [See more information about frequency and presence penalties](https://beta.openai.com/docs/api-reference/parameter-details).
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default)]
-    pub frequency_penalty: Option<i8>,
+    pub frequency_penalty: Option<f32>,
     /// Generates `best_of` completions server-side and returns the "best" (the one with the highest log probability per token).
     /// Results cannot be streamed.
     ///
