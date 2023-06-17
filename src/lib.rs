@@ -5,6 +5,7 @@ use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder, Response};
 use reqwest_eventsource::{CannotCloneRequestError, EventSource, RequestBuilderExt};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+pub mod audio;
 pub mod chat;
 pub mod completions;
 pub mod edits;
