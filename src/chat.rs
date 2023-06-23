@@ -53,7 +53,7 @@ pub struct ChatCompletionMessage {
     /// The name of the user in a multi-user chat
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    /// The function that ChatGPT called
+    /// The function that ChatGPT called. This should be "None" usually, and is returned by ChatGPT and not provided by the developer
     ///
     /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
     #[serde(skip_serializing_if = "Option::is_none")]
