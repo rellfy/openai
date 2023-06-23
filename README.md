@@ -32,7 +32,7 @@ For other modules, refer to the `tests` submodules for some reference.
 
 `██████████` Models
 
-`████████░░` Completions
+`████████░░` Completions (Function calling is supported)
 
 `████████░░` Chat
 
@@ -56,5 +56,5 @@ All contributions are welcome. Unit tests are encouraged.
 
 > **Fork Notice**
 >
-> This package was initially developed by [Valentine Briese](https://github.com/valentinegb/openai).  
+> This package was initially developed by [Valentine Briese](https://github.com/valentinegb/openai).
 > As the original repo was archived, this is a fork and continuation of the project.

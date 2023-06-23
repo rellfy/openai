@@ -7,6 +7,7 @@ use futures_util::StreamExt;
 use reqwest::Method;
 use reqwest_eventsource::{CannotCloneRequestError, Event, EventSource};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
@@ -45,10 +46,18 @@ pub struct ChatCompletionMessage {
     /// The role of the author of this message.
     pub role: ChatCompletionMessageRole,
     /// The contents of the message
-    pub content: String,
+    ///
+    /// This is always required for all messages, except for when ChatGPT calls
+    /// a function.
+    pub content: Option<String>,
     /// The name of the user in a multi-user chat
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    /// The function that ChatGPT called. This should be "None" usually, and is returned by ChatGPT and not provided by the developer
+    ///
+    /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub function_call: Option<ChatCompletionFunctionCall>,
 }
 
 /// Same as ChatCompletionMessage, but received during a response stream.
@@ -61,6 +70,44 @@ pub struct ChatCompletionMessageDelta {
     /// The name of the user in a multi-user chat
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    /// The function that ChatGPT called
+    ///
+    /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub function_call: Option<ChatCompletionFunctionCallDelta>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct ChatCompletionFunctionDefinition {
+    /// The name of the function
+    pub name: String,
+    /// The description of the function
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// The parameters of the function formatted in JSON Schema
+    /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-parameters)
+    /// [See more information about JSON Schema.](https://json-schema.org/understanding-json-schema/)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<Value>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+pub struct ChatCompletionFunctionCall {
+    /// The name of the function ChatGPT called
+    pub name: String,
+    /// The arguments that ChatGPT called (formatted in JSON)
+    /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
+    pub arguments: String
+}
+
+/// Same as ChatCompletionFunctionCall, but received during a response stream.
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+pub struct ChatCompletionFunctionCallDelta {
+    /// The name of the function ChatGPT called
+    pub name: Option<String>,
+    /// The arguments that ChatGPT called (formatted in JSON)
+    /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
+    pub arguments: Option<String>
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Copy)]
@@ -130,6 +177,27 @@ pub struct ChatCompletionRequest {
     #[builder(default)]
     #[serde(skip_serializing_if = "String::is_empty")]
     user: String,
+    /// Describe functions that ChatGPT can call
+    /// The latest models of ChatGPT support function calling, which allows you to define functions that can be called from the prompt.
+    /// For example, you can define a function called "get_weather" that returns the weather in a given city
+    ///
+    /// [Function calling API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-functions)
+    /// [See more information about function calling in ChatGPT.](https://platform.openai.com/docs/guides/gpt/function-calling)
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    functions: Vec<ChatCompletionFunctionDefinition>,
+    /// A string or object of the function to call
+    ///
+    /// Controls how the model responds to function calls
+    ///
+    /// - "none" means the model does not call a function, and responds to the end-user.
+    /// - "auto" means the model can pick between an end-user or calling a function.
+    /// - Specifying a particular function via {"name":\ "my_function"} forces the model to call that function.
+    ///
+    /// "none" is the default when no functions are present. "auto" is the default if functions are present.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    function_call: Option<Value>
 }
 
 impl<C> ChatCompletionGeneric<C> {
@@ -221,6 +289,39 @@ impl ChatCompletionChoiceDelta {
                 }
             }
         };
+
+        // merge function calls
+        // function call names are concatenated
+        // arguments are merged by concatenating them
+        match self.delta.function_call.as_mut() {
+            Some(function_call) => {
+                match &other.delta.function_call {
+                    Some(other_function_call) => {
+                        // push the arguments string of the other function call into this one
+                        match (&mut function_call.arguments, &other_function_call.arguments) {
+                            (Some(function_call), Some(other_function_call)) => {
+                                function_call.push_str(&other_function_call);
+                            }
+                            (None, Some(other_function_call)) => {
+                                function_call.arguments = Some(other_function_call.clone());
+                            }
+                            _ => {}
+                        }
+
+                    }
+                    None => {}
+                }
+            }
+            None => {
+                match &other.delta.function_call {
+                    Some(other_function_call) => {
+                        // Set this content to other content.
+                        self.delta.function_call = Some(other_function_call.clone());
+                    }
+                    None => {}
+                }
+            }
+        };
         Ok(())
     }
 }
@@ -244,11 +345,22 @@ impl From<ChatCompletionDelta> for ChatCompletion {
                             .delta
                             .role
                             .unwrap_or_else(|| ChatCompletionMessageRole::System),
-                        content: clone_default_unwrapped_option_string(&choice.delta.content),
+                        content: choice.delta.content.clone(),
                         name: choice.delta.name.clone(),
+                        function_call: choice.delta.function_call.clone().map(|f| f.into()),
+
                     },
                 })
                 .collect(),
+        }
+    }
+}
+
+impl From<ChatCompletionFunctionCallDelta> for ChatCompletionFunctionCall {
+    fn from(delta: ChatCompletionFunctionCallDelta) -> Self {
+        ChatCompletionFunctionCall {
+            name: delta.name.unwrap_or("".to_string()),
+            arguments: delta.arguments.unwrap_or_default(),
         }
     }
 }
@@ -257,6 +369,7 @@ impl From<ChatCompletionDelta> for ChatCompletion {
 pub enum ChatCompletionDeltaMergeError {
     DifferentCompletionIds,
     DifferentCompletionChoiceIndices,
+    FunctionCallArgumentTypeMismatch,
 }
 
 async fn forward_deserialized_chat_response_stream(
@@ -312,8 +425,9 @@ mod tests {
             "gpt-3.5-turbo",
             [ChatCompletionMessage {
                 role: ChatCompletionMessageRole::User,
-                content: "Hello!".to_string(),
+                content: Some("Hello!".to_string()),
                 name: None,
+                function_call: None,
             }],
         )
         .temperature(0.0)
@@ -322,7 +436,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            chat_completion.choices.first().unwrap().message.content,
+            chat_completion.choices.first().unwrap().message.content.as_ref().unwrap(),
             "Hello there! How can I assist you today?"
         );
     }
@@ -336,8 +450,9 @@ mod tests {
             "gpt-3.5-turbo",
             [ChatCompletionMessage {
                 role: ChatCompletionMessageRole::User,
-                content: "Hello!".to_string(),
+                content: Some("Hello!".to_string()),
                 name: None,
+                function_call: None,
             }],
         )
         .temperature(0.0)
@@ -348,9 +463,60 @@ mod tests {
         let chat_completion = stream_to_completion(chat_stream).await;
 
         assert_eq!(
-            chat_completion.choices.first().unwrap().message.content,
+            chat_completion.choices.first().unwrap().message.content.as_ref().unwrap(),
             "Hello there! How can I assist you today?"
         );
+    }
+
+    #[tokio::test]
+    async fn chat_function() {
+        dotenv().ok();
+        set_key(env::var("OPENAI_KEY").unwrap());
+
+        let chat_stream = ChatCompletion::builder(
+            "gpt-3.5-turbo-0613",
+            [
+                ChatCompletionMessage {
+                    role: ChatCompletionMessageRole::User,
+                    content: Some("What is the weather in Boston?".to_string()),
+                    name: None,
+                    function_call: None,
+                }
+            ]
+        ).functions([ChatCompletionFunctionDefinition {
+            description: Some("Get the current weather in a given location.".to_string()),
+            name: "get_current_weather".to_string(),
+            parameters: Some(serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city and state to get the weather for. (eg: San Francisco, CA)"
+                    }
+                },
+                "required": ["location"]
+            })),
+        }])
+        .temperature(0.2)
+        .create_stream()
+        .await
+        .unwrap();
+
+        let chat_completion = stream_to_completion(chat_stream).await;
+
+        assert_eq!(
+            chat_completion.choices.first().unwrap().message.function_call.as_ref().unwrap().name,
+            "get_current_weather".to_string(),
+        );
+
+        assert_eq!(
+            serde_json::from_str::<Value>(&chat_completion.choices.first().unwrap().message.function_call.as_ref().unwrap().arguments).unwrap(),
+            serde_json::json!({
+                "location": "Boston, MA"
+            }),
+        );
+
+
     }
 
     async fn stream_to_completion(
