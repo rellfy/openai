@@ -116,6 +116,7 @@ pub enum ChatCompletionMessageRole {
     System,
     User,
     Assistant,
+    Function,
 }
 
 #[derive(Serialize, Builder, Debug, Clone)]
