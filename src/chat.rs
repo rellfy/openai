@@ -116,6 +116,7 @@ pub enum ChatCompletionMessageRole {
     System,
     User,
     Assistant,
+    Function,
 }
 
 #[derive(Serialize, Builder, Debug, Clone)]
@@ -437,7 +438,7 @@ mod tests {
 
         assert_eq!(
             chat_completion.choices.first().unwrap().message.content.as_ref().unwrap(),
-            "Hello there! How can I assist you today?"
+            "Hello! How can I assist you today?"
         );
     }
 
@@ -464,7 +465,7 @@ mod tests {
 
         assert_eq!(
             chat_completion.choices.first().unwrap().message.content.as_ref().unwrap(),
-            "Hello there! How can I assist you today?"
+            "Hello! How can I assist you today?"
         );
     }
 
