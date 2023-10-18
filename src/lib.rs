@@ -236,5 +236,7 @@ mod tests {
             get_base_url().lock().unwrap().to_owned(),
             String::from("https://api.openai.com/v2/")
         );
+        // need this here to reset the base url for other tests
+        set_base_url(String::from("https://api.openai.com/v1"));
     }
 }
