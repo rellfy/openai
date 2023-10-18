@@ -179,7 +179,7 @@ pub fn set_key(value: String) {
 /// use std::env;
 ///
 /// dotenv().ok();
-/// set_base_url(env::var("OPENAI_BASE_URL").unwrap());
+/// set_base_url(env::var("OPENAI_BASE_URL").unwrap_or_default());
 /// ```
 pub fn set_base_url(value: String) {
     let base_url_mutex = get_base_url();
