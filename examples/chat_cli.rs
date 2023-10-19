@@ -7,7 +7,7 @@ use dotenvy::dotenv;
 
 use openai::{
     chat::{ChatCompletion, ChatCompletionMessage, ChatCompletionMessageRole},
-    set_key,
+    set_base_url, set_key,
 };
 
 #[tokio::main]
@@ -15,6 +15,7 @@ async fn main() {
     // Make sure you have a file named `.env` with the `OPENAI_KEY` environment variable defined!
     dotenv().unwrap();
     set_key(env::var("OPENAI_KEY").unwrap());
+    set_base_url(env::var("OPENAI_BASE_URL").unwrap_or_default());
 
     let mut messages = vec![ChatCompletionMessage {
         role: ChatCompletionMessageRole::System,

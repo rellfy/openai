@@ -13,9 +13,8 @@ pub mod files;
 pub mod models;
 pub mod moderations;
 
-const BASE_URL: &str = "https://api.openai.com/v1/";
-
 static API_KEY: Mutex<String> = Mutex::new(String::new());
+static BASE_URL: Mutex<String> = Mutex::new(String::new());
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct OpenAiError {
@@ -90,7 +89,7 @@ where
     F: FnOnce(RequestBuilder) -> RequestBuilder,
 {
     let client = Client::new();
-    let mut request = client.request(method, BASE_URL.to_owned() + route);
+    let mut request = client.request(method, get_base_url().lock().unwrap().to_owned() + route);
 
     request = builder(request);
 
@@ -110,7 +109,7 @@ where
     F: FnOnce(RequestBuilder) -> RequestBuilder,
 {
     let client = Client::new();
-    let mut request = client.request(method, BASE_URL.to_owned() + route);
+    let mut request = client.request(method, get_base_url().lock().unwrap().to_owned() + route);
 
     request = builder(request);
 
@@ -166,4 +165,78 @@ where
 /// ```
 pub fn set_key(value: String) {
     *API_KEY.lock().unwrap() = value;
+}
+
+/// Sets the base url for all OpenAI API functions.
+///
+/// ## Examples
+///
+/// Use environment variable `OPENAI_BASE_URL` defined from `.env` file:
+///
+/// ```rust
+/// use openai::set_base_url;
+/// use dotenvy::dotenv;
+/// use std::env;
+///
+/// dotenv().ok();
+/// set_base_url(env::var("OPENAI_BASE_URL").unwrap_or_default());
+/// ```
+pub fn set_base_url(value: String) {
+    let base_url_mutex = get_base_url();
+    if value.is_empty() {
+        return;
+    }
+    let mut base_url = base_url_mutex.lock().unwrap();
+    *base_url = value;
+    if !base_url.ends_with('/') {
+        *base_url += "/";
+    }
+}
+
+/// Returns the base url for all OpenAI API functions.
+/// Defaults to `https://api.openai.com/v1/`.
+fn get_base_url() -> &'static Mutex<String> {
+    let mut base_url = BASE_URL.lock().unwrap();
+    if base_url.is_empty() {
+        *base_url = String::from("https://api.openai.com/v1/");
+    }
+    &BASE_URL
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_base_url_default() {
+        assert_eq!(
+            get_base_url().lock().unwrap().to_owned(),
+            String::from("https://api.openai.com/v1/")
+        );
+
+        // empty env var
+        set_base_url(String::from(""));
+        assert_eq!(
+            get_base_url().lock().unwrap().to_owned(),
+            String::from("https://api.openai.com/v1/")
+        );
+
+        // appends slash
+        set_base_url(String::from("https://api.openai.com/v1"));
+        assert_eq!(
+            get_base_url().lock().unwrap().to_owned(),
+            String::from("https://api.openai.com/v1/")
+        );
+    }
+
+    #[test]
+    fn test_get_base_url_set() {
+        set_base_url(String::from("https://api.openai.com/v2/"));
+        assert_eq!(
+            get_base_url().lock().unwrap().to_owned(),
+            String::from("https://api.openai.com/v2/")
+        );
+        // need this here to reset the base url for other tests
+        set_base_url(String::from("https://api.openai.com/v1"));
+    }
 }
