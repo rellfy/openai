@@ -47,9 +47,8 @@ pub struct ChatCompletionMessage {
     pub role: ChatCompletionMessageRole,
     /// The contents of the message
     ///
-    /// This is always required for all messages, except for when ChatGPT calls
-    /// a function.
-    pub content: Option<String>,
+    /// This is always required for all messages.
+    pub content: String,
     /// The name of the user in a multi-user chat
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -346,7 +345,7 @@ impl From<ChatCompletionDelta> for ChatCompletion {
                             .delta
                             .role
                             .unwrap_or_else(|| ChatCompletionMessageRole::System),
-                        content: choice.delta.content.clone(),
+                        content: choice.delta.content.clone().unwrap_or_default(),
                         name: choice.delta.name.clone(),
                         function_call: choice.delta.function_call.clone().map(|f| f.into()),
 
