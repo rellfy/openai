@@ -19,7 +19,7 @@ async fn main() {
 
     let mut messages = vec![ChatCompletionMessage {
         role: ChatCompletionMessageRole::System,
-        content: Some("You are a large language model built into a command line interface as an example of what the `openai` Rust library made by Valentine Briese can do.".to_string()),
+        content: "You are a large language model built into a command line interface as an example of what the `openai` Rust library made by Valentine Briese can do.".to_string(),
         name: None,
         function_call: None,
     }];
@@ -33,7 +33,7 @@ async fn main() {
         stdin().read_line(&mut user_message_content).unwrap();
         messages.push(ChatCompletionMessage {
             role: ChatCompletionMessageRole::User,
-            content: Some(user_message_content),
+            content: user_message_content,
             name: None,
             function_call: None,
         });
@@ -47,7 +47,7 @@ async fn main() {
         println!(
             "{:#?}: {}",
             &returned_message.role,
-            &returned_message.content.clone().unwrap().trim()
+            &returned_message.content.clone().trim()
         );
 
         messages.push(returned_message);

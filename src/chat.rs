@@ -425,7 +425,7 @@ mod tests {
             "gpt-3.5-turbo",
             [ChatCompletionMessage {
                 role: ChatCompletionMessageRole::User,
-                content: Some("Hello!".to_string()),
+                content: "Hello!".to_string(),
                 name: None,
                 function_call: None,
             }],
@@ -436,7 +436,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(
-            chat_completion.choices.first().unwrap().message.content.as_ref().unwrap(),
+            chat_completion.choices.first().unwrap().message.content,
             "Hello! How can I assist you today?"
         );
     }
@@ -450,7 +450,7 @@ mod tests {
             "gpt-3.5-turbo",
             [ChatCompletionMessage {
                 role: ChatCompletionMessageRole::User,
-                content: Some("Hello!".to_string()),
+                content: "Hello!".to_string(),
                 name: None,
                 function_call: None,
             }],
@@ -463,7 +463,7 @@ mod tests {
         let chat_completion = stream_to_completion(chat_stream).await;
 
         assert_eq!(
-            chat_completion.choices.first().unwrap().message.content.as_ref().unwrap(),
+            chat_completion.choices.first().unwrap().message.content,
             "Hello! How can I assist you today?"
         );
     }
@@ -478,7 +478,7 @@ mod tests {
             [
                 ChatCompletionMessage {
                     role: ChatCompletionMessageRole::User,
-                    content: Some("What is the weather in Boston?".to_string()),
+                    content: "What is the weather in Boston?".to_string(),
                     name: None,
                     function_call: None,
                 }

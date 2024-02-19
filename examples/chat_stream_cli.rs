@@ -18,7 +18,7 @@ async fn main() {
 
     let mut messages = vec![ChatCompletionMessage {
         role: ChatCompletionMessageRole::System,
-        content: Some("You're an AI that replies to each message verbosely.".to_string()),
+        content: "You're an AI that replies to each message verbosely.".to_string(),
         name: None,
         function_call: None,
     }];
@@ -32,7 +32,7 @@ async fn main() {
         stdin().read_line(&mut user_message_content).unwrap();
         messages.push(ChatCompletionMessage {
             role: ChatCompletionMessageRole::User,
-            content: Some(user_message_content),
+            content: user_message_content,
             name: None,
             function_call: None,
         });
