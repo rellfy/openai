@@ -152,6 +152,10 @@ pub struct ChatCompletionRequest {
     #[builder(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     stop: Vec<String>,
+    /// This feature is in Beta. If specified, our system will make a best effort to sample deterministically, such that repeated requests with the same seed and parameters should return the same result. Determinism is not guaranteed, and you should refer to the system_fingerprint response parameter to monitor changes in the backend.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    seed: Option<u64>,    
     /// The maximum number of tokens allowed for the generated answer. By default, the number of tokens the model can return will be (4096 - prompt tokens).
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
