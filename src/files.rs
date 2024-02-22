@@ -237,7 +237,6 @@ impl FileUploadBuilder {
     }
 }
 
-
 impl Files {
     /// Get a list of all uploaded files in the openai platform.
     pub async fn list() -> ApiResponseOrError<Files> {

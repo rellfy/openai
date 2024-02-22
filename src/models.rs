@@ -40,9 +40,9 @@ impl Model {
 mod tests {
     use super::*;
     use crate::set_key;
+    use crate::tests::DEFAULT_LEGACY_MODEL;
     use dotenvy::dotenv;
     use std::env;
-    use crate::tests::DEFAULT_LEGACY_MODEL;
 
     #[tokio::test]
     async fn model() {
