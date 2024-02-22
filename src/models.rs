@@ -8,11 +8,9 @@ use serde::Deserialize;
 #[derive(Deserialize, Clone)]
 pub struct Model {
     pub id: String,
+    pub object: String,
     pub created: u32,
     pub owned_by: String,
-    pub permission: Vec<ModelPermission>,
-    pub root: String,
-    pub parent: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
