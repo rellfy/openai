@@ -8,11 +8,9 @@ use serde::Deserialize;
 #[derive(Deserialize, Clone)]
 pub struct Model {
     pub id: String,
+    pub object: String,
     pub created: u32,
     pub owned_by: String,
-    pub permission: Vec<ModelPermission>,
-    pub root: String,
-    pub parent: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -44,14 +42,13 @@ mod tests {
     use crate::set_key;
     use dotenvy::dotenv;
     use std::env;
+    use crate::tests::DEFAULT_LEGACY_MODEL;
 
     #[tokio::test]
     async fn model() {
         dotenv().ok();
         set_key(env::var("OPENAI_KEY").unwrap());
-
-        let model = Model::from("text-davinci-003").await.unwrap();
-
-        assert_eq!(model.id, "text-davinci-003");
+        let model = Model::from(DEFAULT_LEGACY_MODEL).await.unwrap();
+        assert_eq!(model.id, DEFAULT_LEGACY_MODEL);
     }
 }
