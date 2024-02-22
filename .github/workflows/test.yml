@@ -23,6 +23,8 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+      - name: Format check
+        run: cargo fmt --all -- --check
       - name: Build
         run: cargo build --verbose
       - name: Run tests (native-tls)

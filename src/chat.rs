@@ -97,7 +97,7 @@ pub struct ChatCompletionFunctionCall {
     pub name: String,
     /// The arguments that ChatGPT called (formatted in JSON)
     /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
-    pub arguments: String
+    pub arguments: String,
 }
 
 /// Same as ChatCompletionFunctionCall, but received during a response stream.
@@ -107,7 +107,7 @@ pub struct ChatCompletionFunctionCallDelta {
     pub name: Option<String>,
     /// The arguments that ChatGPT called (formatted in JSON)
     /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
-    pub arguments: Option<String>
+    pub arguments: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Copy)]
@@ -155,7 +155,7 @@ pub struct ChatCompletionRequest {
     /// This feature is in Beta. If specified, our system will make a best effort to sample deterministically, such that repeated requests with the same seed and parameters should return the same result. Determinism is not guaranteed, and you should refer to the system_fingerprint response parameter to monitor changes in the backend.
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    seed: Option<u64>,    
+    seed: Option<u64>,
     /// The maximum number of tokens allowed for the generated answer. By default, the number of tokens the model can return will be (4096 - prompt tokens).
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -202,7 +202,7 @@ pub struct ChatCompletionRequest {
     /// "none" is the default when no functions are present. "auto" is the default if functions are present.
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    function_call: Option<Value>
+    function_call: Option<Value>,
 }
 
 impl<C> ChatCompletionGeneric<C> {
@@ -312,7 +312,6 @@ impl ChatCompletionChoiceDelta {
                             }
                             _ => {}
                         }
-
                     }
                     None => {}
                 }
@@ -353,7 +352,6 @@ impl From<ChatCompletionDelta> for ChatCompletion {
                         content: choice.delta.content.clone(),
                         name: choice.delta.name.clone(),
                         function_call: choice.delta.function_call.clone().map(|f| f.into()),
-
                     },
                 })
                 .collect(),
@@ -435,13 +433,20 @@ mod tests {
                 function_call: None,
             }],
         )
-            .temperature(0.0)
-            .create()
-            .await
-            .unwrap();
+        .temperature(0.0)
+        .create()
+        .await
+        .unwrap();
 
         assert_eq!(
-            chat_completion.choices.first().unwrap().message.content.as_ref().unwrap(),
+            chat_completion
+                .choices
+                .first()
+                .unwrap()
+                .message
+                .content
+                .as_ref()
+                .unwrap(),
             "Hello! How can I assist you today?"
         );
     }
@@ -457,20 +462,30 @@ mod tests {
             "gpt-3.5-turbo",
             [ChatCompletionMessage {
                 role: ChatCompletionMessageRole::User,
-                content: Some("What type of seed does Mr. England sow in the song? Reply with 1 word.".to_string()),
+                content: Some(
+                    "What type of seed does Mr. England sow in the song? Reply with 1 word."
+                        .to_string(),
+                ),
                 name: None,
                 function_call: None,
             }],
         )
-            // Determinism currently comes from temperature 0, not seed.
-            .temperature(0.0)
-            .seed(1337u64)
-            .create()
-            .await
-            .unwrap();
+        // Determinism currently comes from temperature 0, not seed.
+        .temperature(0.0)
+        .seed(1337u64)
+        .create()
+        .await
+        .unwrap();
 
         assert_eq!(
-            chat_completion.choices.first().unwrap().message.content.as_ref().unwrap(),
+            chat_completion
+                .choices
+                .first()
+                .unwrap()
+                .message
+                .content
+                .as_ref()
+                .unwrap(),
             "Love"
         );
     }
@@ -497,7 +512,14 @@ mod tests {
         let chat_completion = stream_to_completion(chat_stream).await;
 
         assert_eq!(
-            chat_completion.choices.first().unwrap().message.content.as_ref().unwrap(),
+            chat_completion
+                .choices
+                .first()
+                .unwrap()
+                .message
+                .content
+                .as_ref()
+                .unwrap(),
             "Hello! How can I assist you today?"
         );
     }
@@ -539,18 +561,35 @@ mod tests {
         let chat_completion = stream_to_completion(chat_stream).await;
 
         assert_eq!(
-            chat_completion.choices.first().unwrap().message.function_call.as_ref().unwrap().name,
+            chat_completion
+                .choices
+                .first()
+                .unwrap()
+                .message
+                .function_call
+                .as_ref()
+                .unwrap()
+                .name,
             "get_current_weather".to_string(),
         );
 
         assert_eq!(
-            serde_json::from_str::<Value>(&chat_completion.choices.first().unwrap().message.function_call.as_ref().unwrap().arguments).unwrap(),
+            serde_json::from_str::<Value>(
+                &chat_completion
+                    .choices
+                    .first()
+                    .unwrap()
+                    .message
+                    .function_call
+                    .as_ref()
+                    .unwrap()
+                    .arguments
+            )
+            .unwrap(),
             serde_json::json!({
                 "location": "Boston, MA"
             }),
         );
-
-
     }
 
     async fn stream_to_completion(
