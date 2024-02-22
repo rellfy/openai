@@ -4,6 +4,7 @@ on:
     types: [created]
 env:
   CARGO_TERM_COLOR: always
+  OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
 jobs:
   publish:
     name: Publish to crates.io
