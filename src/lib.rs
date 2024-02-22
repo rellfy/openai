@@ -204,8 +204,10 @@ fn get_base_url() -> &'static Mutex<String> {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
+
+    pub const DEFAULT_LEGACY_MODEL: &str = "gpt-3.5-turbo-instruct";
 
     #[test]
     fn test_get_base_url_default() {

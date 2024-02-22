@@ -169,13 +169,14 @@ mod tests {
     use crate::set_key;
     use dotenvy::dotenv;
     use std::env;
+    use crate::tests::DEFAULT_LEGACY_MODEL;
 
     #[tokio::test]
     async fn completion() {
         dotenv().ok();
         set_key(env::var("OPENAI_KEY").unwrap());
 
-        let completion = Completion::builder("text-davinci-003")
+        let completion = Completion::builder(DEFAULT_LEGACY_MODEL)
             .prompt("Say this is a test")
             .max_tokens(7)
             .temperature(0.0)
@@ -185,7 +186,7 @@ mod tests {
 
         assert_eq!(
             completion.choices.first().unwrap().text,
-            "\n\nThis is indeed a test"
+            "\n\nThis is a test."
         );
     }
 }
