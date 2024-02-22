@@ -435,14 +435,43 @@ mod tests {
                 function_call: None,
             }],
         )
-        .temperature(0.0)
-        .create()
-        .await
-        .unwrap();
+            .temperature(0.0)
+            .create()
+            .await
+            .unwrap();
 
         assert_eq!(
             chat_completion.choices.first().unwrap().message.content.as_ref().unwrap(),
             "Hello! How can I assist you today?"
+        );
+    }
+
+    // Seeds are not deterministic so the only point of the test is to
+    // ensure that passing a seed still results in a valid response.
+    #[tokio::test]
+    async fn chat_seed() {
+        dotenv().ok();
+        set_key(env::var("OPENAI_KEY").unwrap());
+
+        let chat_completion = ChatCompletion::builder(
+            "gpt-3.5-turbo",
+            [ChatCompletionMessage {
+                role: ChatCompletionMessageRole::User,
+                content: Some("What type of seed does Mr. England sow in the song? Reply with 1 word.".to_string()),
+                name: None,
+                function_call: None,
+            }],
+        )
+            // Determinism currently comes from temperature 0, not seed.
+            .temperature(0.0)
+            .seed(1337u64)
+            .create()
+            .await
+            .unwrap();
+
+        assert_eq!(
+            chat_completion.choices.first().unwrap().message.content.as_ref().unwrap(),
+            "Love"
         );
     }
 
