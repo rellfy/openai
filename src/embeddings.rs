@@ -76,6 +76,10 @@ impl Embedding {
         Ok(embeddings.data.swap_remove(0))
     }
 
+    pub fn magnitude(&self) -> f64 {
+        self.vec.iter().map(|x| x * x).sum::<f64>().sqrt()
+    }
+
     pub fn distance(&self, other: &Self) -> f64 {
         let dot_product: f64 = self
             .vec
@@ -83,9 +87,9 @@ impl Embedding {
             .zip(other.vec.iter())
             .map(|(x, y)| x * y)
             .sum();
-        let product_of_lengths = (self.vec.len() * other.vec.len()) as f64;
+        let product_of_magnitudes = self.magnitude() * other.magnitude();
 
-        dot_product / product_of_lengths
+        1.0 - dot_product / product_of_magnitudes
     }
 }
 
@@ -145,8 +149,7 @@ mod tests {
                 total_tokens: 0,
             },
         };
-
-        assert_eq!(embeddings.distances()[0], 0.0);
+        assert_eq!(embeddings.distances()[0], 1.0);
     }
 
     #[test]
@@ -167,6 +170,6 @@ mod tests {
             },
         };
 
-        assert_ne!(embeddings.distances()[0], 0.0);
+        assert_eq!(embeddings.distances()[0], 0.29289321881345254);
     }
 }
