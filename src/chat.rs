@@ -203,6 +203,34 @@ pub struct ChatCompletionRequest {
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     function_call: Option<Value>,
+
+    /// An object specifying the format that the model must output. Compatible with GPT-4 Turbo and all GPT-3.5 Turbo models newer than gpt-3.5-turbo-1106.
+    /// Setting to { "type": "json_object" } enables JSON mode, which guarantees the message the model generates is valid JSON.
+    /// Important: when using JSON mode, you must also instruct the model to produce JSON yourself via a system or user message. Without this, the model may generate an unending stream of whitespace until the generation reaches the token limit, resulting in a long-running and seemingly "stuck" request. Also note that the message content may be partially cut off if finish_reason="length", which indicates the generation exceeded max_tokens or the conversation exceeded the max context length.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    response_format: Option<ChatCompletionResponseFormat>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub struct ChatCompletionResponseFormat {
+    /// Must be one of text or json_object (defaults to text)
+    #[serde(rename = "type")]
+    typ: String,
+}
+
+impl ChatCompletionResponseFormat {
+    pub fn json_object() -> Self {
+        ChatCompletionResponseFormat {
+            typ: "json_object".to_string(),
+        }
+    }
+
+    pub fn text() -> Self {
+        ChatCompletionResponseFormat {
+            typ: "text".to_string(),
+        }
+    }
 }
 
 impl<C> ChatCompletionGeneric<C> {
