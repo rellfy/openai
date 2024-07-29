@@ -41,7 +41,7 @@ pub struct ChatCompletionChoiceDelta {
     pub delta: ChatCompletionMessageDelta,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct ChatCompletionMessage {
     /// The role of the author of this message.
     pub role: ChatCompletionMessageRole,
@@ -61,7 +61,7 @@ pub struct ChatCompletionMessage {
 }
 
 /// Same as ChatCompletionMessage, but received during a response stream.
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct ChatCompletionMessageDelta {
     /// The role of the author of this message.
     pub role: Option<ChatCompletionMessageRole>,
@@ -110,7 +110,7 @@ pub struct ChatCompletionFunctionCallDelta {
     pub arguments: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Copy)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, Eq, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ChatCompletionMessageRole {
     System,
