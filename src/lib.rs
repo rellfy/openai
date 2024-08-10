@@ -47,8 +47,8 @@ impl std::error::Error for OpenAiError {}
 #[derive(Deserialize, Clone)]
 #[serde(untagged)]
 pub enum ApiResponse<T> {
-    Ok(T),
     Err { error: OpenAiError },
+    Ok(T),
 }
 
 #[derive(Deserialize, Clone, Copy, Debug)]
