@@ -665,7 +665,9 @@ mod tests {
 
     #[test]
     fn builder_clone_and_eq() {
-        let builder_a = ChatCompletion::builder("gpt-4", []).temperature(0.0).seed(65u64);
+        let builder_a = ChatCompletion::builder("gpt-4", [])
+            .temperature(0.0)
+            .seed(65u64);
         let builder_b = builder_a.clone();
         let builder_c = builder_b.clone().temperature(1.0);
         let builder_d = ChatCompletionBuilder::default();
