@@ -203,7 +203,6 @@ pub struct ChatCompletionRequest {
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     function_call: Option<Value>,
-
     /// An object specifying the format that the model must output. Compatible with GPT-4 Turbo and all GPT-3.5 Turbo models newer than gpt-3.5-turbo-1106.
     /// Setting to { "type": "json_object" } enables JSON mode, which guarantees the message the model generates is valid JSON.
     /// Important: when using JSON mode, you must also instruct the model to produce JSON yourself via a system or user message. Without this, the model may generate an unending stream of whitespace until the generation reaches the token limit, resulting in a long-running and seemingly "stuck" request. Also note that the message content may be partially cut off if finish_reason="length", which indicates the generation exceeded max_tokens or the conversation exceeded the max context length.
@@ -445,6 +444,7 @@ mod tests {
     use super::*;
     use crate::set_key;
     use dotenvy::dotenv;
+    use reqwest::Response;
     use std::env;
 
     #[tokio::test]
@@ -462,6 +462,7 @@ mod tests {
             }],
         )
         .temperature(0.0)
+        .response_format(ChatCompletionResponseFormat::text())
         .create()
         .await
         .unwrap();
@@ -617,6 +618,48 @@ mod tests {
             serde_json::json!({
                 "location": "Boston, MA"
             }),
+        );
+    }
+
+    #[tokio::test]
+    async fn chat_response_format_json() {
+        dotenv().ok();
+        set_key(env::var("OPENAI_KEY").unwrap());
+        let chat_completion = ChatCompletion::builder(
+            "gpt-3.5-turbo",
+            [ChatCompletionMessage {
+                role: ChatCompletionMessageRole::User,
+                content: Some("Write an example JSON for a JWT header using RS256".to_string()),
+                name: None,
+                function_call: None,
+            }],
+        )
+        .temperature(0.0)
+        .seed(1337u64)
+        .response_format(ChatCompletionResponseFormat::json_object())
+        .create()
+        .await
+        .unwrap();
+        let response_string = chat_completion
+            .choices
+            .first()
+            .unwrap()
+            .message
+            .content
+            .as_ref()
+            .unwrap();
+        #[derive(Deserialize, Eq, PartialEq, Debug)]
+        struct Response {
+            alg: String,
+            typ: String,
+        }
+        let response = serde_json::from_str::<Response>(response_string).unwrap();
+        assert_eq!(
+            response,
+            Response {
+                alg: "RS256".to_owned(),
+                typ: "JWT".to_owned()
+            }
         );
     }
 
