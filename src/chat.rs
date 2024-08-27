@@ -17,7 +17,7 @@ pub type ChatCompletion = ChatCompletionGeneric<ChatCompletionChoice>;
 /// A delta chat completion, which is streamed token by token.
 pub type ChatCompletionDelta = ChatCompletionGeneric<ChatCompletionChoiceDelta>;
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct ChatCompletionGeneric<C> {
     pub id: String,
     pub object: String,
@@ -27,21 +27,21 @@ pub struct ChatCompletionGeneric<C> {
     pub usage: Option<Usage>,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct ChatCompletionChoice {
     pub index: u64,
     pub finish_reason: String,
     pub message: ChatCompletionMessage,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct ChatCompletionChoiceDelta {
     pub index: u64,
     pub finish_reason: Option<String>,
     pub delta: ChatCompletionMessageDelta,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct ChatCompletionMessage {
     /// The role of the author of this message.
     pub role: ChatCompletionMessageRole,
@@ -61,7 +61,7 @@ pub struct ChatCompletionMessage {
 }
 
 /// Same as ChatCompletionMessage, but received during a response stream.
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct ChatCompletionMessageDelta {
     /// The role of the author of this message.
     pub role: Option<ChatCompletionMessageRole>,
@@ -77,7 +77,7 @@ pub struct ChatCompletionMessageDelta {
     pub function_call: Option<ChatCompletionFunctionCallDelta>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct ChatCompletionFunctionDefinition {
     /// The name of the function
     pub name: String,
@@ -110,7 +110,7 @@ pub struct ChatCompletionFunctionCallDelta {
     pub arguments: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Copy)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, Eq, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ChatCompletionMessageRole {
     System,
