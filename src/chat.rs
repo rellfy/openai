@@ -120,6 +120,7 @@ pub enum ChatCompletionMessageRole {
 }
 
 #[derive(Serialize, Builder, Debug, Clone)]
+#[builder(derive(Clone, Debug, PartialEq))]
 #[builder(pattern = "owned")]
 #[builder(name = "ChatCompletionBuilder")]
 #[builder(setter(strip_option, into))]
@@ -211,7 +212,7 @@ pub struct ChatCompletionRequest {
     response_format: Option<ChatCompletionResponseFormat>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct ChatCompletionResponseFormat {
     /// Must be one of text or json_object (defaults to text)
     #[serde(rename = "type")]
@@ -444,7 +445,6 @@ mod tests {
     use super::*;
     use crate::set_key;
     use dotenvy::dotenv;
-    use reqwest::Response;
     use std::env;
 
     #[tokio::test]
@@ -661,6 +661,19 @@ mod tests {
                 typ: "JWT".to_owned()
             }
         );
+    }
+
+    #[test]
+    fn builder_clone_and_eq() {
+        let builder_a = ChatCompletion::builder("gpt-4", []).temperature(0.0).seed(65u64);
+        let builder_b = builder_a.clone();
+        let builder_c = builder_b.clone().temperature(1.0);
+        let builder_d = ChatCompletionBuilder::default();
+        assert_eq!(builder_a, builder_b);
+        assert_ne!(builder_a, builder_c);
+        assert_ne!(builder_b, builder_c);
+        assert_ne!(builder_a, builder_d);
+        assert_ne!(builder_c, builder_d);
     }
 
     async fn stream_to_completion(
