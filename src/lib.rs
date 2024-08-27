@@ -16,7 +16,7 @@ pub mod moderations;
 static API_KEY: Mutex<String> = Mutex::new(String::new());
 static BASE_URL: Mutex<String> = Mutex::new(String::new());
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct OpenAiError {
     pub message: String,
     #[serde(rename = "type")]
@@ -51,7 +51,7 @@ pub enum ApiResponse<T> {
     Ok(T),
 }
 
-#[derive(Deserialize, Clone, Copy, Debug)]
+#[derive(Deserialize, Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Usage {
     pub prompt_tokens: u32,
     pub completion_tokens: u32,
