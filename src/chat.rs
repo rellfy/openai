@@ -9,6 +9,8 @@ use reqwest_eventsource::{CannotCloneRequestError, Event, EventSource};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::error::Error;
+use std::fmt::{Display, Formatter, Write};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 /// A full chat completion.
@@ -402,6 +404,18 @@ pub enum ChatCompletionDeltaMergeError {
     DifferentCompletionChoiceIndices,
     FunctionCallArgumentTypeMismatch,
 }
+
+impl Display for ChatCompletionDeltaMergeError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChatCompletionDeltaMergeError::DifferentCompletionIds => f.write_str("Different completion IDs"),
+            ChatCompletionDeltaMergeError::DifferentCompletionChoiceIndices => f.write_str("Different completion choice indices"),
+            ChatCompletionDeltaMergeError::FunctionCallArgumentTypeMismatch => f.write_str("Function call argument type mismatch"),
+        }
+    }
+}
+
+impl Error for ChatCompletionDeltaMergeError {}
 
 async fn forward_deserialized_chat_response_stream(
     mut stream: EventSource,
