@@ -377,7 +377,6 @@ mod tests {
         let request = test_upload_request();
         let file_upload_path = Path::new(request.file_name.as_str());
         let file_name = file_upload_path
-            .clone()
             .file_name()
             .unwrap()
             .to_str()
