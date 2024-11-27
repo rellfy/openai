@@ -10,23 +10,49 @@ An unofficial Rust library for the OpenAI API.
 > There may be breaking changes between versions while in alpha.
 > See [Implementation Progress](#implementation-progress).
 
-## Core Principles
-
-- Modularity
-- Library, not a wrapper
-- Idiomatic Rust
-- Environmental variables should be the prioritized method of authentication,
-  but not the only way to do things
-
 ## Examples
 
 Examples can be found in the `examples` directory.
 
-As the package is still a work in progress and there may be breaking changes,
-examples are not available for all the crate's functionality.
+Please note that examples are not available for all the crate's functionality,
+PRs are appreciated to expand the coverage.
 
-Currently, there are examples for the `completions` module and the `chat` module.
+Currently, there are examples for the `completions` module and the `chat`
+module.
 For other modules, refer to the `tests` submodules for some reference.
+
+### Chat Example
+
+```rust
+// Relies on OPENAI_KEY and optionally OPENAI_BASE_URL.
+let credentials = Credentials::from_env();
+let messages = vec![
+    ChatCompletionMessage {
+        role: ChatCompletionMessageRole::System,
+        content: Some("You are a helpful assistant.".to_string()),
+        name: None,
+        function_call: None,
+    },
+    ChatCompletionMessage {
+        role: ChatCompletionMessageRole::User,
+        content: Some("Tell me a random crab fact".to_string()),
+        name: None,
+        function_call: None,
+    },
+];
+let chat_completion = ChatCompletion::builder("gpt-4o", messages.clone())
+    .credentials(credentials.clone())
+    .create()
+    .await
+    .unwrap();
+let returned_message = chat_completion.choices.first().unwrap().message.clone();
+// Assistant: Sure! Here's a random crab fact: ...
+println!(
+    "{:#?}: {}",
+    returned_message.role,
+    returned_message.content.unwrap().trim()
+);
+```
 
 ## Implementation Progress
 
