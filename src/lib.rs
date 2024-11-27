@@ -1,9 +1,10 @@
-use std::sync::Mutex;
-
 use reqwest::multipart::Form;
 use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder, Response};
 use reqwest_eventsource::{CannotCloneRequestError, EventSource, RequestBuilderExt};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::env;
+use std::env::VarError;
+use std::sync::{LazyLock, RwLock};
 
 pub mod chat;
 pub mod completions;
@@ -13,8 +14,34 @@ pub mod files;
 pub mod models;
 pub mod moderations;
 
-static API_KEY: Mutex<String> = Mutex::new(String::new());
-static BASE_URL: Mutex<String> = Mutex::new(String::new());
+pub static DEFAULT_BASE_URL: LazyLock<String> =
+    LazyLock::new(|| String::from("https://api.openai.com/v1/"));
+static DEFAULT_CREDENTIALS: LazyLock<RwLock<Credentials>> =
+    LazyLock::new(|| RwLock::new(Credentials::from_env()));
+
+/// Holds the API key and base URL for an OpenAI-compatible API.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Credentials {
+    pub api_key: String,
+    pub base_url: String,
+}
+
+impl Credentials {
+    /// Fetches the credentials from the ENV variables
+    /// OPENAI_KEY and OPENAI_BASE_URL.
+    /// # Panics
+    /// This function will panic if the key variable is missing from the env.
+    /// If only the base URL variable is missing, it will use the default.
+    pub fn from_env() -> Credentials {
+        Credentials {
+            api_key: env::var("OPENAI_KEY").unwrap(),
+            base_url: env::var("OPENAI_BASE_URL").unwrap_or_else(|e| match e {
+                VarError::NotPresent => DEFAULT_BASE_URL.clone(),
+                VarError::NotUnicode(v) => panic!("OPENAI_BASE_URL is not unicode: {v:#?}"),
+            }),
+        }
+    }
+}
 
 #[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct OpenAiError {
@@ -72,29 +99,42 @@ impl From<std::io::Error> for OpenAiError {
     }
 }
 
-async fn openai_request_json<F, T>(method: Method, route: &str, builder: F) -> ApiResponseOrError<T>
+async fn openai_request_json<F, T>(
+    method: Method,
+    route: &str,
+    builder: F,
+    credentials_opt: Option<Credentials>,
+) -> ApiResponseOrError<T>
 where
     F: FnOnce(RequestBuilder) -> RequestBuilder,
     T: DeserializeOwned,
 {
-    let api_response = openai_request(method, route, builder).await?.json().await?;
+    let api_response = openai_request(method, route, builder, credentials_opt)
+        .await?
+        .json()
+        .await?;
     match api_response {
         ApiResponse::Ok(t) => Ok(t),
         ApiResponse::Err { error } => Err(error),
     }
 }
 
-async fn openai_request<F>(method: Method, route: &str, builder: F) -> ApiResponseOrError<Response>
+async fn openai_request<F>(
+    method: Method,
+    route: &str,
+    builder: F,
+    credentials_opt: Option<Credentials>,
+) -> ApiResponseOrError<Response>
 where
     F: FnOnce(RequestBuilder) -> RequestBuilder,
 {
     let client = Client::new();
-    let mut request = client.request(method, get_base_url().lock().unwrap().to_owned() + route);
-
+    let credentials =
+        credentials_opt.unwrap_or_else(|| DEFAULT_CREDENTIALS.read().unwrap().clone());
+    let mut request = client.request(method, format!("{}{route}", credentials.base_url));
     request = builder(request);
-
     let response = request
-        .header(AUTHORIZATION, format!("Bearer {}", API_KEY.lock().unwrap()))
+        .header(AUTHORIZATION, format!("Bearer {}", credentials.api_key))
         .send()
         .await?;
     Ok(response)
@@ -104,49 +144,72 @@ async fn openai_request_stream<F>(
     method: Method,
     route: &str,
     builder: F,
+    credentials_opt: Option<Credentials>,
 ) -> Result<EventSource, CannotCloneRequestError>
 where
     F: FnOnce(RequestBuilder) -> RequestBuilder,
 {
     let client = Client::new();
-    let mut request = client.request(method, get_base_url().lock().unwrap().to_owned() + route);
-
+    let credentials =
+        credentials_opt.unwrap_or_else(|| DEFAULT_CREDENTIALS.read().unwrap().clone());
+    let mut request = client.request(method, format!("{}{route}", credentials.base_url));
     request = builder(request);
-
     let stream = request
-        .header(AUTHORIZATION, format!("Bearer {}", API_KEY.lock().unwrap()))
+        .header(AUTHORIZATION, format!("Bearer {}", credentials.api_key))
         .eventsource()?;
-
     Ok(stream)
 }
 
-async fn openai_get<T>(route: &str) -> ApiResponseOrError<T>
+async fn openai_get<T>(route: &str, credentials_opt: Option<Credentials>) -> ApiResponseOrError<T>
 where
     T: DeserializeOwned,
 {
-    openai_request_json(Method::GET, route, |request| request).await
+    openai_request_json(Method::GET, route, |request| request, credentials_opt).await
 }
 
-async fn openai_delete<T>(route: &str) -> ApiResponseOrError<T>
+async fn openai_delete<T>(
+    route: &str,
+    credentials_opt: Option<Credentials>,
+) -> ApiResponseOrError<T>
 where
     T: DeserializeOwned,
 {
-    openai_request_json(Method::DELETE, route, |request| request).await
+    openai_request_json(Method::DELETE, route, |request| request, credentials_opt).await
 }
 
-async fn openai_post<J, T>(route: &str, json: &J) -> ApiResponseOrError<T>
+async fn openai_post<J, T>(
+    route: &str,
+    json: &J,
+    credentials_opt: Option<Credentials>,
+) -> ApiResponseOrError<T>
 where
     J: Serialize + ?Sized,
     T: DeserializeOwned,
 {
-    openai_request_json(Method::POST, route, |request| request.json(json)).await
+    openai_request_json(
+        Method::POST,
+        route,
+        |request| request.json(json),
+        credentials_opt,
+    )
+    .await
 }
 
-async fn openai_post_multipart<T>(route: &str, form: Form) -> ApiResponseOrError<T>
+async fn openai_post_multipart<T>(
+    route: &str,
+    form: Form,
+    credentials_opt: Option<Credentials>,
+) -> ApiResponseOrError<T>
 where
     T: DeserializeOwned,
 {
-    openai_request_json(Method::POST, route, |request| request.multipart(form)).await
+    openai_request_json(
+        Method::POST,
+        route,
+        |request| request.multipart(form),
+        credentials_opt,
+    )
+    .await
 }
 
 /// Sets the key for all OpenAI API functions.
@@ -163,8 +226,13 @@ where
 /// dotenv().ok();
 /// set_key(env::var("OPENAI_KEY").unwrap());
 /// ```
+#[deprecated(
+    since = "1.0.0-alpha.16",
+    note = "use the `Credentials` struct instead"
+)]
 pub fn set_key(value: String) {
-    *API_KEY.lock().unwrap() = value;
+    let mut credentials = DEFAULT_CREDENTIALS.write().unwrap();
+    credentials.api_key = value;
 }
 
 /// Sets the base url for all OpenAI API functions.
@@ -181,64 +249,22 @@ pub fn set_key(value: String) {
 /// dotenv().ok();
 /// set_base_url(env::var("OPENAI_BASE_URL").unwrap_or_default());
 /// ```
-pub fn set_base_url(value: String) {
-    let base_url_mutex = get_base_url();
+#[deprecated(
+    since = "1.0.0-alpha.16",
+    note = "use the `Credentials` struct instead"
+)]
+pub fn set_base_url(mut value: String) {
     if value.is_empty() {
         return;
     }
-    let mut base_url = base_url_mutex.lock().unwrap();
-    *base_url = value;
-    if !base_url.ends_with('/') {
-        *base_url += "/";
+    if !value.ends_with('/') {
+        value += "/";
     }
-}
-
-/// Returns the base url for all OpenAI API functions.
-/// Defaults to `https://api.openai.com/v1/`.
-fn get_base_url() -> &'static Mutex<String> {
-    let mut base_url = BASE_URL.lock().unwrap();
-    if base_url.is_empty() {
-        *base_url = String::from("https://api.openai.com/v1/");
-    }
-    &BASE_URL
+    let mut credentials = DEFAULT_CREDENTIALS.write().unwrap();
+    credentials.base_url = value;
 }
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
-
     pub const DEFAULT_LEGACY_MODEL: &str = "gpt-3.5-turbo-instruct";
-
-    #[test]
-    fn test_get_base_url_default() {
-        assert_eq!(
-            get_base_url().lock().unwrap().to_owned(),
-            String::from("https://api.openai.com/v1/")
-        );
-
-        // empty env var
-        set_base_url(String::from(""));
-        assert_eq!(
-            get_base_url().lock().unwrap().to_owned(),
-            String::from("https://api.openai.com/v1/")
-        );
-
-        // appends slash
-        set_base_url(String::from("https://api.openai.com/v1"));
-        assert_eq!(
-            get_base_url().lock().unwrap().to_owned(),
-            String::from("https://api.openai.com/v1/")
-        );
-    }
-
-    #[test]
-    fn test_get_base_url_set() {
-        set_base_url(String::from("https://api.openai.com/v2/"));
-        assert_eq!(
-            get_base_url().lock().unwrap().to_owned(),
-            String::from("https://api.openai.com/v2/")
-        );
-        // need this here to reset the base url for other tests
-        set_base_url(String::from("https://api.openai.com/v1"));
-    }
 }

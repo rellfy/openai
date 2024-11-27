@@ -2,19 +2,16 @@ use dotenvy::dotenv;
 use openai::chat::{ChatCompletion, ChatCompletionDelta};
 use openai::{
     chat::{ChatCompletionMessage, ChatCompletionMessageRole},
-    set_key,
+    Credentials,
 };
-use std::{
-    env,
-    io::{stdin, stdout, Write},
-};
+use std::io::{stdin, stdout, Write};
 use tokio::sync::mpsc::Receiver;
 
 #[tokio::main]
 async fn main() {
     // Make sure you have a file named `.env` with the `OPENAI_KEY` environment variable defined!
     dotenv().unwrap();
-    set_key(env::var("OPENAI_KEY").unwrap());
+    let credentials = Credentials::from_env();
 
     let mut messages = vec![ChatCompletionMessage {
         role: ChatCompletionMessageRole::System,
@@ -38,6 +35,7 @@ async fn main() {
         });
 
         let chat_stream = ChatCompletionDelta::builder("gpt-3.5-turbo", messages.clone())
+            .credentials(credentials.clone())
             .create_stream()
             .await
             .unwrap();

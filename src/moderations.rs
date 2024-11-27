@@ -1,6 +1,5 @@
 //! Given a input text, outputs if the model classifies it as violating OpenAI's content policy.
-
-use super::{openai_post, ApiResponseOrError};
+use super::{openai_post, ApiResponseOrError, Credentials};
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
@@ -60,11 +59,15 @@ pub struct ModerationRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default)]
     pub model: Option<String>,
+    /// The credentials to use for this request.
+    #[serde(skip_serializing)]
+    #[builder(default)]
+    pub credentials: Option<Credentials>,
 }
 
 impl Moderation {
-    async fn create(request: &ModerationRequest) -> ApiResponseOrError<Self> {
-        openai_post("moderations", request).await
+    async fn create(request: ModerationRequest) -> ApiResponseOrError<Self> {
+        openai_post("moderations", &request, request.credentials.clone()).await
     }
 
     pub fn builder(input: impl Into<String>) -> ModerationBuilder {
@@ -74,24 +77,23 @@ impl Moderation {
 
 impl ModerationBuilder {
     pub async fn create(self) -> ApiResponseOrError<Moderation> {
-        Moderation::create(&self.build().unwrap()).await
+        Moderation::create(self.build().unwrap()).await
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::set_key;
     use dotenvy::dotenv;
-    use std::env;
 
     #[tokio::test]
     async fn moderations() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
 
         let moderation = Moderation::builder("I want to kill them.")
             .model("text-moderation-latest")
+            .credentials(credentials)
             .create()
             .await
             .unwrap();

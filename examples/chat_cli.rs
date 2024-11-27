@@ -1,21 +1,15 @@
-use std::{
-    env,
-    io::{stdin, stdout, Write},
-};
-
 use dotenvy::dotenv;
-
 use openai::{
     chat::{ChatCompletion, ChatCompletionMessage, ChatCompletionMessageRole},
-    set_base_url, set_key,
+    Credentials,
 };
+use std::io::{stdin, stdout, Write};
 
 #[tokio::main]
 async fn main() {
     // Make sure you have a file named `.env` with the `OPENAI_KEY` environment variable defined!
     dotenv().unwrap();
-    set_key(env::var("OPENAI_KEY").unwrap());
-    set_base_url(env::var("OPENAI_BASE_URL").unwrap_or_default());
+    let credentials = Credentials::from_env();
 
     let mut messages = vec![ChatCompletionMessage {
         role: ChatCompletionMessageRole::System,
@@ -39,6 +33,7 @@ async fn main() {
         });
 
         let chat_completion = ChatCompletion::builder("gpt-3.5-turbo", messages.clone())
+            .credentials(credentials.clone())
             .create()
             .await
             .unwrap();
