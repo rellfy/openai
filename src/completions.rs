@@ -1,7 +1,6 @@
 //! Given a prompt, the model will return one or more predicted completions,
 //! and can also return the probabilities of alternative tokens at each position.
-
-use super::{openai_post, ApiResponseOrError, Usage};
+use super::{openai_post, ApiResponseOrError, Credentials, Usage};
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -144,12 +143,16 @@ pub struct CompletionRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default)]
     pub user: Option<String>,
+    /// The credentials to use for this request.
+    #[serde(skip_serializing)]
+    pub credentials: Option<Credentials>,
 }
 
 impl Completion {
     /// Creates a completion for the provided prompt and parameters
-    async fn create(request: &CompletionRequest) -> ApiResponseOrError<Self> {
-        openai_post("completions", request).await
+    async fn create(request: CompletionRequest) -> ApiResponseOrError<Self> {
+        let credentials_opt = request.credentials.clone();
+        openai_post("completions", &request, credentials_opt).await
     }
 
     pub fn builder(model: &str) -> CompletionBuilder {
@@ -159,27 +162,26 @@ impl Completion {
 
 impl CompletionBuilder {
     pub async fn create(self) -> ApiResponseOrError<Completion> {
-        Completion::create(&self.build().unwrap()).await
+        Completion::create(self.build().unwrap()).await
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::set_key;
     use crate::tests::DEFAULT_LEGACY_MODEL;
     use dotenvy::dotenv;
-    use std::env;
 
     #[tokio::test]
     async fn completion() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
 
         let completion = Completion::builder(DEFAULT_LEGACY_MODEL)
             .prompt("Say this is a test")
             .max_tokens(7)
             .temperature(0.0)
+            .credentials(credentials)
             .create()
             .await
             .unwrap();

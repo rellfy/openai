@@ -2,7 +2,7 @@
 //!
 //! Related guide: [Embeddings](https://beta.openai.com/docs/guides/embeddings)
 
-use super::{openai_post, ApiResponseOrError};
+use super::{openai_post, ApiResponseOrError, Credentials};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Clone)]
@@ -46,10 +46,17 @@ impl Embeddings {
     ///   Each input must not exceed 8192 tokens in length.
     /// * `user` - A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
     ///   [Learn more](https://beta.openai.com/docs/guides/safety-best-practices/end-user-ids).
-    pub async fn create(model: &str, input: Vec<&str>, user: &str) -> ApiResponseOrError<Self> {
+    /// * `credentials` - The OpenAI credentials.
+    pub async fn create(
+        model: &str,
+        input: Vec<&str>,
+        user: &str,
+        credentials: Credentials,
+    ) -> ApiResponseOrError<Self> {
         openai_post(
             "embeddings",
             &CreateEmbeddingsRequestBody { model, input, user },
+            Some(credentials),
         )
         .await
     }
@@ -71,8 +78,13 @@ impl Embeddings {
 }
 
 impl Embedding {
-    pub async fn create(model: &str, input: &str, user: &str) -> ApiResponseOrError<Self> {
-        let mut embeddings = Embeddings::create(model, vec![input], user).await?;
+    pub async fn create(
+        model: &str,
+        input: &str,
+        user: &str,
+        credentials: Credentials,
+    ) -> ApiResponseOrError<Self> {
+        let mut embeddings = Embeddings::create(model, vec![input], user, credentials).await?;
         Ok(embeddings.data.swap_remove(0))
     }
 
@@ -96,19 +108,18 @@ impl Embedding {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::set_key;
     use dotenvy::dotenv;
-    use std::env;
 
     #[tokio::test]
     async fn embeddings() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
 
         let embeddings = Embeddings::create(
             "text-embedding-ada-002",
             vec!["The food was delicious and the waiter..."],
             "",
+            credentials,
         )
         .await
         .unwrap();
@@ -119,12 +130,13 @@ mod tests {
     #[tokio::test]
     async fn embedding() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
 
         let embedding = Embedding::create(
             "text-embedding-ada-002",
             "The food was delicious and the waiter...",
             "",
+            credentials,
         )
         .await
         .unwrap();
