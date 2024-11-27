@@ -169,6 +169,7 @@ pub struct FileUploadRequest {
     purpose: String,
     /// The credentials to use for this request.
     #[serde(skip_serializing)]
+    #[builder(default)]
     pub credentials: Option<Credentials>,
 }
 

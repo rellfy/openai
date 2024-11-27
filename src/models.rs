@@ -38,7 +38,6 @@ impl Model {
 
     /// Retrieves a model instance,
     /// providing basic information about the model such as the owner and permissioning.
-    #[deprecated(since = "1.0.0-alpha.16", note = "use `fetch` instead")]
     pub async fn fetch(id: &str, credentials: Credentials) -> ApiResponseOrError<Self> {
         openai_get(&format!("models/{id}"), Some(credentials)).await
     }
@@ -47,16 +46,16 @@ impl Model {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::set_key;
     use crate::tests::DEFAULT_LEGACY_MODEL;
     use dotenvy::dotenv;
-    use std::env;
 
     #[tokio::test]
     async fn model() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
-        let model = Model::from(DEFAULT_LEGACY_MODEL).await.unwrap();
+        let credentials = Credentials::from_env();
+        let model = Model::fetch(DEFAULT_LEGACY_MODEL, credentials)
+            .await
+            .unwrap();
         assert_eq!(model.id, DEFAULT_LEGACY_MODEL);
     }
 }

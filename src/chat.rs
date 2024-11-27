@@ -212,6 +212,7 @@ pub struct ChatCompletionRequest {
     response_format: Option<ChatCompletionResponseFormat>,
     /// The credentials to use for this request.
     #[serde(skip_serializing)]
+    #[builder(default)]
     credentials: Option<Credentials>,
 }
 
@@ -472,7 +473,6 @@ fn clone_default_unwrapped_option_string(string: &Option<String>) -> String {
 mod tests {
     use super::*;
     use dotenvy::dotenv;
-    use std::env;
 
     #[tokio::test]
     async fn chat() {

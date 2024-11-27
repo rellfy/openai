@@ -61,6 +61,7 @@ pub struct ModerationRequest {
     pub model: Option<String>,
     /// The credentials to use for this request.
     #[serde(skip_serializing)]
+    #[builder(default)]
     pub credentials: Option<Credentials>,
 }
 
@@ -83,17 +84,16 @@ impl ModerationBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::set_key;
     use dotenvy::dotenv;
-    use std::env;
 
     #[tokio::test]
     async fn moderations() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
 
         let moderation = Moderation::builder("I want to kill them.")
             .model("text-moderation-latest")
+            .credentials(credentials)
             .create()
             .await
             .unwrap();

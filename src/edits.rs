@@ -54,6 +54,7 @@ pub struct EditRequest {
     pub top_p: Option<f32>,
     /// The credentials to use for this request.
     #[serde(skip_serializing)]
+    #[builder(default)]
     pub credentials: Option<Credentials>,
 }
 
@@ -92,7 +93,6 @@ impl EditBuilder {
 mod tests {
     use super::*;
     use dotenvy::dotenv;
-    use std::env;
 
     #[tokio::test]
     #[ignore]
@@ -103,6 +103,7 @@ mod tests {
         let edit = Edit::builder("text-davinci-edit-001", "Fix the spelling mistakes")
             .input("What day of the wek is it?")
             .temperature(0.0)
+            .credentials(credentials)
             .create()
             .await
             .unwrap();

@@ -145,6 +145,7 @@ pub struct CompletionRequest {
     pub user: Option<String>,
     /// The credentials to use for this request.
     #[serde(skip_serializing)]
+    #[builder(default)]
     pub credentials: Option<Credentials>,
 }
 
