@@ -376,12 +376,7 @@ mod tests {
     fn file_name_path_test() {
         let request = test_upload_request();
         let file_upload_path = Path::new(request.file_name.as_str());
-        let file_name = file_upload_path
-            .clone()
-            .file_name()
-            .unwrap()
-            .to_str()
-            .unwrap();
+        let file_name = file_upload_path.file_name().unwrap().to_str().unwrap();
         assert_eq!(file_name, "file_upload_test1.jsonl");
         let file_upload_path = file_upload_path.canonicalize().unwrap();
         let file_exists = file_upload_path.exists();

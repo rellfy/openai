@@ -403,6 +403,24 @@ pub enum ChatCompletionDeltaMergeError {
     FunctionCallArgumentTypeMismatch,
 }
 
+impl std::fmt::Display for ChatCompletionDeltaMergeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChatCompletionDeltaMergeError::DifferentCompletionIds => {
+                f.write_str("Different completion IDs")
+            }
+            ChatCompletionDeltaMergeError::DifferentCompletionChoiceIndices => {
+                f.write_str("Different completion choice indices")
+            }
+            ChatCompletionDeltaMergeError::FunctionCallArgumentTypeMismatch => {
+                f.write_str("Function call argument type mismatch")
+            }
+        }
+    }
+}
+
+impl std::error::Error for ChatCompletionDeltaMergeError {}
+
 async fn forward_deserialized_chat_response_stream(
     mut stream: EventSource,
     tx: Sender<ChatCompletionDelta>,
@@ -559,7 +577,7 @@ mod tests {
         set_key(env::var("OPENAI_KEY").unwrap());
 
         let chat_stream = ChatCompletion::builder(
-            "gpt-3.5-turbo-0613",
+            "gpt-4o",
             [
                 ChatCompletionMessage {
                     role: ChatCompletionMessageRole::User,
