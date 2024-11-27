@@ -577,7 +577,7 @@ mod tests {
         set_key(env::var("OPENAI_KEY").unwrap());
 
         let chat_stream = ChatCompletion::builder(
-            "gpt-3.5-turbo-0613",
+            "gpt-4o",
             [
                 ChatCompletionMessage {
                     role: ChatCompletionMessageRole::User,
