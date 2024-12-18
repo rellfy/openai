@@ -22,11 +22,19 @@ static DEFAULT_CREDENTIALS: LazyLock<RwLock<Credentials>> =
 /// Holds the API key and base URL for an OpenAI-compatible API.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Credentials {
-    pub api_key: String,
-    pub base_url: String,
+    api_key: String,
+    base_url: String,
 }
 
 impl Credentials {
+    pub fn new(api_key: impl Into<String>, base_url: impl Into<String>) -> Self {
+        let base_url = parse_base_url(base_url.into());
+        Self {
+            api_key: api_key.into(),
+            base_url,
+        }
+    }
+
     /// Fetches the credentials from the ENV variables
     /// OPENAI_KEY and OPENAI_BASE_URL.
     /// # Panics
@@ -40,6 +48,14 @@ impl Credentials {
         });
         let base_url = parse_base_url(base_url_unparsed);
         Credentials { api_key, base_url }
+    }
+
+    pub fn api_key(&self) -> &str {
+        &self.api_key
+    }
+
+    pub fn base_url(&self) -> &str {
+        &self.base_url
     }
 }
 
