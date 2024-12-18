@@ -1,6 +1,6 @@
 //! Given a chat conversation, the model will return a chat completion response.
 
-use super::{openai_post, ApiResponseOrError, Usage};
+use super::{openai_post, ApiResponseOrError, Credentials, Usage};
 use crate::openai_request_stream;
 use derive_builder::Builder;
 use futures_util::StreamExt;
@@ -210,6 +210,10 @@ pub struct ChatCompletionRequest {
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     response_format: Option<ChatCompletionResponseFormat>,
+    /// The credentials to use for this request.
+    #[serde(skip_serializing)]
+    #[builder(default)]
+    credentials: Option<Credentials>,
 }
 
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
@@ -245,17 +249,24 @@ impl<C> ChatCompletionGeneric<C> {
 }
 
 impl ChatCompletion {
-    pub async fn create(request: &ChatCompletionRequest) -> ApiResponseOrError<Self> {
-        openai_post("chat/completions", request).await
+    pub async fn create(request: ChatCompletionRequest) -> ApiResponseOrError<Self> {
+        let credentials_opt = request.credentials.clone();
+        openai_post("chat/completions", &request, credentials_opt).await
     }
 }
 
 impl ChatCompletionDelta {
     pub async fn create(
-        request: &ChatCompletionRequest,
+        request: ChatCompletionRequest,
     ) -> Result<Receiver<Self>, CannotCloneRequestError> {
-        let stream =
-            openai_request_stream(Method::POST, "chat/completions", |r| r.json(request)).await?;
+        let credentials_opt = request.credentials.clone();
+        let stream = openai_request_stream(
+            Method::POST,
+            "chat/completions",
+            |r| r.json(&request),
+            credentials_opt,
+        )
+        .await?;
         let (tx, rx) = channel::<Self>(32);
         tokio::spawn(forward_deserialized_chat_response_stream(stream, tx));
         Ok(rx)
@@ -440,14 +451,14 @@ async fn forward_deserialized_chat_response_stream(
 
 impl ChatCompletionBuilder {
     pub async fn create(self) -> ApiResponseOrError<ChatCompletion> {
-        ChatCompletion::create(&self.build().unwrap()).await
+        ChatCompletion::create(self.build().unwrap()).await
     }
 
     pub async fn create_stream(
         mut self,
     ) -> Result<Receiver<ChatCompletionDelta>, CannotCloneRequestError> {
         self.stream = Some(Some(true));
-        ChatCompletionDelta::create(&self.build().unwrap()).await
+        ChatCompletionDelta::create(self.build().unwrap()).await
     }
 }
 
@@ -461,14 +472,12 @@ fn clone_default_unwrapped_option_string(string: &Option<String>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::set_key;
     use dotenvy::dotenv;
-    use std::env;
 
     #[tokio::test]
     async fn chat() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
 
         let chat_completion = ChatCompletion::builder(
             "gpt-3.5-turbo",
@@ -481,6 +490,7 @@ mod tests {
         )
         .temperature(0.0)
         .response_format(ChatCompletionResponseFormat::text())
+        .credentials(credentials)
         .create()
         .await
         .unwrap();
@@ -503,7 +513,7 @@ mod tests {
     #[tokio::test]
     async fn chat_seed() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
 
         let chat_completion = ChatCompletion::builder(
             "gpt-3.5-turbo",
@@ -520,6 +530,7 @@ mod tests {
         // Determinism currently comes from temperature 0, not seed.
         .temperature(0.0)
         .seed(1337u64)
+        .credentials(credentials)
         .create()
         .await
         .unwrap();
@@ -540,7 +551,7 @@ mod tests {
     #[tokio::test]
     async fn chat_stream() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
 
         let chat_stream = ChatCompletion::builder(
             "gpt-3.5-turbo",
@@ -552,6 +563,7 @@ mod tests {
             }],
         )
         .temperature(0.0)
+        .credentials(credentials)
         .create_stream()
         .await
         .unwrap();
@@ -574,7 +586,7 @@ mod tests {
     #[tokio::test]
     async fn chat_function() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
 
         let chat_stream = ChatCompletion::builder(
             "gpt-4o",
@@ -601,6 +613,7 @@ mod tests {
             })),
         }])
         .temperature(0.2)
+        .credentials(credentials)
         .create_stream()
         .await
         .unwrap();
@@ -642,7 +655,7 @@ mod tests {
     #[tokio::test]
     async fn chat_response_format_json() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
         let chat_completion = ChatCompletion::builder(
             "gpt-3.5-turbo",
             [ChatCompletionMessage {
@@ -655,6 +668,7 @@ mod tests {
         .temperature(0.0)
         .seed(1337u64)
         .response_format(ChatCompletionResponseFormat::json_object())
+        .credentials(credentials)
         .create()
         .await
         .unwrap();

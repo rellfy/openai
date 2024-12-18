@@ -1,6 +1,5 @@
 //! Given a prompt and an instruction, the model will return an edited version of the prompt.
-
-use super::{openai_post, ApiResponseOrError, OpenAiError, Usage};
+use super::{openai_post, ApiResponseOrError, Credentials, OpenAiError, Usage};
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
@@ -53,11 +52,17 @@ pub struct EditRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default)]
     pub top_p: Option<f32>,
+    /// The credentials to use for this request.
+    #[serde(skip_serializing)]
+    #[builder(default)]
+    pub credentials: Option<Credentials>,
 }
 
 impl Edit {
-    async fn create(request: &EditRequest) -> ApiResponseOrError<Self> {
-        let response: Result<Self, OpenAiError> = openai_post("edits", request).await?;
+    async fn create(request: EditRequest) -> ApiResponseOrError<Self> {
+        let credentials_opt = request.credentials.clone();
+        let response: Result<Self, OpenAiError> =
+            openai_post("edits", &request, credentials_opt).await?;
 
         match response {
             Ok(mut edit) => {
@@ -80,26 +85,25 @@ impl Edit {
 
 impl EditBuilder {
     pub async fn create(self) -> ApiResponseOrError<Edit> {
-        Edit::create(&self.build().unwrap()).await
+        Edit::create(self.build().unwrap()).await
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::set_key;
     use dotenvy::dotenv;
-    use std::env;
 
     #[tokio::test]
     #[ignore]
     async fn edit() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
 
         let edit = Edit::builder("text-davinci-edit-001", "Fix the spelling mistakes")
             .input("What day of the wek is it?")
             .temperature(0.0)
+            .credentials(credentials)
             .create()
             .await
             .unwrap();

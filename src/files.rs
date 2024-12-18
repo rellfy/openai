@@ -14,12 +14,12 @@
 //!use openai::ApiResponseOrError;
 //!use dotenvy::dotenv;
 //!use std::env;
-//!use openai::set_key;
+//!use openai::Credentials;
 //!
 //!#[tokio::main]
 //!async fn main() -> ApiResponseOrError<()> {
 //!     dotenv().ok();
-//!     set_key(env::var("OPENAI_KEY").unwrap());
+//!     let credentials = Credentials::from_env();
 //!     let uploaded_file = File::builder()
 //!         .file_name("test_data/file_upload_test1.jsonl") // local file path to upload.
 //!         .purpose("fine-tune")
@@ -36,13 +36,13 @@
 //!use openai::ApiResponseOrError;
 //!use dotenvy::dotenv;
 //!use std::env;
-//!use openai::set_key;
+//!use openai::Credentials;
 //!
 //!#[tokio::main]
 //!async fn main() -> ApiResponseOrError<()> {
 //!     dotenv().ok();
-//!     set_key(env::var("OPENAI_KEY").unwrap());
-//!     let openai_files = Files::list().await?;
+//!     let credentials = Credentials::from_env();
+//!     let openai_files = Files::list(credentials).await?;
 //!     let file_count = openai_files.len();
 //!     println!("Listing {} files", file_count);
 //!     for openai_file in openai_files.into_iter() {
@@ -59,14 +59,14 @@
 //!use openai::ApiResponseOrError;
 //!use dotenvy::dotenv;
 //!use std::env;
-//!use openai::set_key;
+//!use openai::Credentials;
 //!
 //!#[tokio::main]
 //!async fn main() -> ApiResponseOrError<()> {
 //!     dotenv().ok();
-//!     set_key(env::var("OPENAI_KEY").unwrap());
+//!     let credentials = Credentials::from_env();
 //!     let file_id = "file-XjGxS3KTG0uNmNOK362iJua3"; // Use a real file id.
-//!     let file = File::get(file_id).await?;
+//!     let file = File::fetch(file_id, credentials).await?;
 //!     println!("id: {}, file: {}, size: {}", file.id, file.filename, file.bytes);
 //!     Ok(())
 //!}
@@ -79,15 +79,15 @@
 //!use openai::ApiResponseOrError;
 //!use dotenvy::dotenv;
 //!use std::env;
-//!use openai::set_key;
+//!use openai::Credentials;
 //!
 //!#[tokio::main]
 //!async fn main() -> ApiResponseOrError<()> {
 //!     dotenv().ok();
-//!     set_key(env::var("OPENAI_KEY").unwrap());
+//!     let credentials = Credentials::from_env();
 //!     let test_file = "test_file.jsonl";
 //!     let file_id = "file-XjGxS3KTG0uNmNOK362iJua3"; // Use a real file id.
-//!     File::download_content_to_file(file_id, test_file).await?;
+//!     File::download_content_to_file(file_id, test_file, credentials).await?;
 //!     Ok(())
 //!}
 //! ```
@@ -99,14 +99,14 @@
 //!use openai::ApiResponseOrError;
 //!use dotenvy::dotenv;
 //!use std::env;
-//!use openai::set_key;
+//!use openai::Credentials;
 //!
 //!#[tokio::main]
 //!async fn main() -> ApiResponseOrError<()> {
 //!     dotenv().ok();
-//!     set_key(env::var("OPENAI_KEY").unwrap());
+//!     let credentials = Credentials::from_env();
 //!     let file_id = "file-XjGxS3KTG0uNmNOK362iJua3"; // Use a real file id.
-//!     File::delete(file_id).await?;
+//!     File::delete(file_id, credentials).await?;
 //!     Ok(())
 //!}
 //! ```
@@ -124,7 +124,7 @@ use reqwest::multipart::{Form, Part};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
-use crate::{openai_delete, openai_get, openai_post_multipart, openai_request};
+use crate::{openai_delete, openai_get, openai_post_multipart, openai_request, Credentials};
 
 use super::ApiResponseOrError;
 
@@ -167,11 +167,14 @@ pub struct Files {
 pub struct FileUploadRequest {
     file_name: String,
     purpose: String,
+    /// The credentials to use for this request.
+    #[serde(skip_serializing)]
+    #[builder(default)]
+    pub credentials: Option<Credentials>,
 }
 
 impl File {
-    async fn create(request: &FileUploadRequest) -> ApiResponseOrError<Self> {
-        let purpose = request.purpose.clone();
+    async fn create(request: FileUploadRequest) -> ApiResponseOrError<Self> {
         let upload_file_path = Path::new(request.file_name.as_str());
         let upload_file_path = upload_file_path.canonicalize()?;
         let simple_name = upload_file_path
@@ -185,8 +188,10 @@ impl File {
         let file_part = Part::stream(async_file)
             .file_name(simple_name)
             .mime_str("application/jsonl")?;
-        let form = Form::new().part("file", file_part).text("purpose", purpose);
-        openai_post_multipart("files", form).await
+        let form = Form::new()
+            .part("file", file_part)
+            .text("purpose", request.purpose);
+        openai_post_multipart("files", form, request.credentials).await
     }
 
     /// New FileUploadBuilder
@@ -195,19 +200,47 @@ impl File {
     }
 
     /// Delete a file from openai platform by id.
-    pub async fn delete(id: &str) -> ApiResponseOrError<DeletedFile> {
-        openai_delete(format!("files/{}", id).as_str()).await
+    pub async fn delete(id: &str, credentials: Credentials) -> ApiResponseOrError<DeletedFile> {
+        openai_delete(format!("files/{}", id).as_str(), Some(credentials)).await
     }
 
     /// Get a file from openai platform by id.
+    #[deprecated(since = "1.0.0-alpha.16", note = "use `fetch` instead")]
     pub async fn get(id: &str) -> ApiResponseOrError<File> {
-        openai_get(format!("files/{}", id).as_str()).await
+        openai_get(format!("files/{}", id).as_str(), None).await
+    }
+
+    /// Get a file from openai platform by id.
+    pub async fn fetch(id: &str, credentials: Credentials) -> ApiResponseOrError<File> {
+        openai_get(format!("files/{}", id).as_str(), Some(credentials)).await
     }
 
     /// Download a file as bytes into memory by id.
+    #[deprecated(since = "1.0.0-alpha.16", note = "use `fetch_content_bytes` instead")]
     pub async fn get_content_bytes(id: &str) -> ApiResponseOrError<Vec<u8>> {
+        Self::fetch_content_bytes_with_credentials_opt(id, None).await
+    }
+
+    /// Download a file as bytes into memory by id.
+    pub async fn fetch_content_bytes(
+        id: &str,
+        credentials: Credentials,
+    ) -> ApiResponseOrError<Vec<u8>> {
+        Self::fetch_content_bytes_with_credentials_opt(id, Some(credentials)).await
+    }
+
+    async fn fetch_content_bytes_with_credentials_opt(
+        id: &str,
+        credentials_opt: Option<Credentials>,
+    ) -> ApiResponseOrError<Vec<u8>> {
         let route = format!("files/{}/content", id);
-        let response = openai_request(Method::GET, route.as_str(), |request| request).await?;
+        let response = openai_request(
+            Method::GET,
+            route.as_str(),
+            |request| request,
+            credentials_opt,
+        )
+        .await?;
         let content_len = response.content_length().unwrap_or(1024) as usize;
         let mut file_bytes = BytesMut::with_capacity(content_len);
         let mut bytes_stream = response.bytes_stream();
@@ -218,10 +251,20 @@ impl File {
     }
 
     /// Download a file to a new local file by id.
-    pub async fn download_content_to_file(id: &str, file_path: &str) -> ApiResponseOrError<()> {
+    pub async fn download_content_to_file(
+        id: &str,
+        file_path: &str,
+        credentials: Credentials,
+    ) -> ApiResponseOrError<()> {
         let mut output_file = std::fs::File::create(file_path)?;
         let route = format!("files/{}/content", id);
-        let response = openai_request(Method::GET, route.as_str(), |request| request).await?;
+        let response = openai_request(
+            Method::GET,
+            route.as_str(),
+            |request| request,
+            Some(credentials),
+        )
+        .await?;
         let mut bytes_stream = response.bytes_stream();
         while let Some(Ok(bytes)) = bytes_stream.next().await {
             output_file.write_all(bytes.as_ref())?;
@@ -233,14 +276,14 @@ impl File {
 impl FileUploadBuilder {
     /// Upload the file to the openai platform.
     pub async fn create(self) -> ApiResponseOrError<File> {
-        File::create(&self.build().unwrap()).await
+        File::create(self.build().unwrap()).await
     }
 }
 
 impl Files {
     /// Get a list of all uploaded files in the openai platform.
-    pub async fn list() -> ApiResponseOrError<Files> {
-        openai_get("files").await
+    pub async fn list(credentials: Credentials) -> ApiResponseOrError<Files> {
+        openai_get("files", Some(credentials)).await
     }
     pub fn len(&self) -> usize {
         self.data.len()
@@ -264,7 +307,7 @@ mod tests {
 
     use dotenvy::dotenv;
 
-    use crate::set_key;
+    use crate::DEFAULT_CREDENTIALS;
 
     use super::*;
 
@@ -281,8 +324,12 @@ mod tests {
     #[tokio::test]
     async fn upload_file() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
-        let file_upload = test_upload_builder().create().await.unwrap();
+        let credentials = Credentials::from_env();
+        let file_upload = test_upload_builder()
+            .credentials(credentials)
+            .create()
+            .await
+            .unwrap();
         println!(
             "upload: {}",
             serde_json::to_string_pretty(&file_upload).unwrap()
@@ -293,9 +340,10 @@ mod tests {
     #[tokio::test]
     async fn missing_file() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
         let test_builder = File::builder()
             .file_name("test_data/missing_file.jsonl")
+            .credentials(credentials)
             .purpose("fine-tune");
         let response = test_builder.create().await;
         assert!(response.is_err());
@@ -310,10 +358,10 @@ mod tests {
     #[tokio::test]
     async fn list_files() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
         // ensure at least one file exists
         test_upload_builder().create().await.unwrap();
-        let openai_files = Files::list().await.unwrap();
+        let openai_files = Files::list(credentials).await.unwrap();
         let file_count = openai_files.len();
         assert!(file_count > 0);
         for openai_file in openai_files.into_iter() {
@@ -329,17 +377,22 @@ mod tests {
     #[tokio::test]
     async fn delete_files() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
         // ensure at least one file exists
         test_upload_builder().create().await.unwrap();
         // wait to avoid recent upload still processing error
         tokio::time::sleep(Duration::from_secs(7)).await;
-        let openai_files = Files::list().await.unwrap();
+        let openai_files = Files::list(credentials).await.unwrap();
         assert!(openai_files.data.len() > 0);
         let mut files = openai_files.data;
         files.sort_by(|a, b| a.created_at.cmp(&b.created_at));
         for file in files {
-            let deleted_file = File::delete(file.id.as_str()).await.unwrap();
+            let deleted_file = File::delete(
+                file.id.as_str(),
+                DEFAULT_CREDENTIALS.read().unwrap().clone(),
+            )
+            .await
+            .unwrap();
             assert!(deleted_file.deleted);
             println!("deleted: {} {}", deleted_file.id, deleted_file.deleted)
         }
@@ -348,14 +401,22 @@ mod tests {
     #[tokio::test]
     async fn get_file_and_contents() {
         dotenv().ok();
-        set_key(env::var("OPENAI_KEY").unwrap());
+        let credentials = Credentials::from_env();
 
-        let file = test_upload_builder().create().await.unwrap();
-        let file_get = File::get(file.id.as_str()).await.unwrap();
+        let file = test_upload_builder()
+            .credentials(credentials.clone())
+            .create()
+            .await
+            .unwrap();
+        let file_get = File::fetch(file.id.as_str(), credentials.clone())
+            .await
+            .unwrap();
         assert_eq!(file.id, file_get.id);
 
         // get file as bytes
-        let body_bytes = File::get_content_bytes(file.id.as_str()).await.unwrap();
+        let body_bytes = File::fetch_content_bytes(file.id.as_str(), credentials.clone())
+            .await
+            .unwrap();
         assert_eq!(body_bytes.len(), file.bytes);
 
         // download file to a file
@@ -363,7 +424,7 @@ mod tests {
         let test_dir = format!("{}/{}", manifest_dir, "target/files-test");
         std::fs::create_dir_all(test_dir.as_str()).unwrap();
         let test_file_save_path = format!("{}/{}", test_dir.as_str(), file.filename);
-        File::download_content_to_file(file.id.as_str(), test_file_save_path.as_str())
+        File::download_content_to_file(file.id.as_str(), test_file_save_path.as_str(), credentials)
             .await
             .unwrap();
         let mut local_file = std::fs::File::open(test_file_save_path.as_str()).unwrap();

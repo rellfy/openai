@@ -1,12 +1,12 @@
 use dotenvy::dotenv;
-use openai::{completions::Completion, set_key};
-use std::{env, io::stdin};
+use openai::{completions::Completion, Credentials};
+use std::io::stdin;
 
 #[tokio::main]
 async fn main() {
     // Make sure you have a file named `.env` with the `OPENAI_KEY` environment variable defined!
     dotenv().unwrap();
-    set_key(env::var("OPENAI_KEY").unwrap());
+    let credentials = Credentials::from_env();
 
     loop {
         println!("Prompt:");
@@ -18,6 +18,7 @@ async fn main() {
         let completion = Completion::builder("gpt-3.5-turbo-instruct")
             .prompt(&prompt)
             .max_tokens(1024)
+            .credentials(credentials.clone())
             .create()
             .await
             .unwrap();
