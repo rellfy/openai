@@ -33,13 +33,13 @@ impl Credentials {
     /// This function will panic if the key variable is missing from the env.
     /// If only the base URL variable is missing, it will use the default.
     pub fn from_env() -> Credentials {
-        Credentials {
-            api_key: env::var("OPENAI_KEY").unwrap(),
-            base_url: env::var("OPENAI_BASE_URL").unwrap_or_else(|e| match e {
-                VarError::NotPresent => DEFAULT_BASE_URL.clone(),
-                VarError::NotUnicode(v) => panic!("OPENAI_BASE_URL is not unicode: {v:#?}"),
-            }),
-        }
+        let api_key = env::var("OPENAI_KEY").unwrap();
+        let base_url_unparsed = env::var("OPENAI_BASE_URL").unwrap_or_else(|e| match e {
+            VarError::NotPresent => DEFAULT_BASE_URL.clone(),
+            VarError::NotUnicode(v) => panic!("OPENAI_BASE_URL is not unicode: {v:#?}"),
+        });
+        let base_url = parse_base_url(base_url_unparsed);
+        Credentials { api_key, base_url }
     }
 }
 
@@ -257,11 +257,16 @@ pub fn set_base_url(mut value: String) {
     if value.is_empty() {
         return;
     }
+    value = parse_base_url(value);
+    let mut credentials = DEFAULT_CREDENTIALS.write().unwrap();
+    credentials.base_url = value;
+}
+
+fn parse_base_url(mut value: String) -> String {
     if !value.ends_with('/') {
         value += "/";
     }
-    let mut credentials = DEFAULT_CREDENTIALS.write().unwrap();
-    credentials.base_url = value;
+    value
 }
 
 #[cfg(test)]
