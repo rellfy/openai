@@ -41,7 +41,7 @@ pub struct ChatCompletionChoiceDelta {
     pub delta: ChatCompletionMessageDelta,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Default)]
 pub struct ChatCompletionMessage {
     /// The role of the author of this message.
     pub role: ChatCompletionMessageRole,
@@ -520,6 +520,12 @@ fn clone_default_unwrapped_option_string(string: &Option<String>) -> String {
 
 fn default_tool_calls_deserialization() -> Vec<ToolCall> {
     Vec::new()
+}
+
+impl Default for ChatCompletionMessageRole {
+    fn default() -> Self {
+        Self::User
+    }
 }
 
 #[cfg(test)]
