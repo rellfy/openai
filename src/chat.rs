@@ -804,7 +804,10 @@ mod tests {
             [
                 ChatCompletionMessage {
                     role: ChatCompletionMessageRole::User,
-                    content: Some("What's 0.9102847*28456? reply in plain text please".to_string()),
+                    content: Some(
+                        "What's 0.9102847*28456? reply in plain text and round to 2 decimals"
+                            .to_string(),
+                    ),
                     name: None,
                     function_call: None,
                     tool_call_id: None,
@@ -852,7 +855,7 @@ mod tests {
                 .content
                 .as_ref()
                 .unwrap(),
-            "The result of 0.9102847 multiplied by 28456 is approximately 25903.06."
+            "The result of 0.9102847 * 28456 is approximately 25903.06 when rounded to two decimal places."
         );
     }
 }
