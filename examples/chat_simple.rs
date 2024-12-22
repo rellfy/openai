@@ -14,14 +14,12 @@ async fn main() {
         ChatCompletionMessage {
             role: ChatCompletionMessageRole::System,
             content: Some("You are a helpful assistant.".to_string()),
-            name: None,
-            function_call: None,
+            ..Default::default()
         },
         ChatCompletionMessage {
             role: ChatCompletionMessageRole::User,
             content: Some("Tell me a random crab fact".to_string()),
-            name: None,
-            function_call: None,
+            ..Default::default()
         },
     ];
     let chat_completion = ChatCompletion::builder("gpt-4o", messages.clone())

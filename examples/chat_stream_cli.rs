@@ -16,8 +16,7 @@ async fn main() {
     let mut messages = vec![ChatCompletionMessage {
         role: ChatCompletionMessageRole::System,
         content: Some("You're an AI that replies to each message verbosely.".to_string()),
-        name: None,
-        function_call: None,
+        ..Default::default()
     }];
 
     loop {
@@ -30,8 +29,7 @@ async fn main() {
         messages.push(ChatCompletionMessage {
             role: ChatCompletionMessageRole::User,
             content: Some(user_message_content),
-            name: None,
-            function_call: None,
+            ..Default::default()
         });
 
         let chat_stream = ChatCompletionDelta::builder("gpt-3.5-turbo", messages.clone())
