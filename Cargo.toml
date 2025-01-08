@@ -11,13 +11,21 @@ keywords = ["ai", "machine-learning", "openai", "library"]
 [dependencies]
 serde_json = "1.0.94"
 derive_builder = "0.20.0"
-reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "multipart"], optional = true }
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "stream",
+    "multipart",
+], optional = true }
 serde = { version = "1.0.157", features = ["derive"] }
 reqwest-eventsource = "0.6"
 tokio = { version = "1.26.0", features = ["full"] }
-anyhow = "1.0.70"
+anyhow = "1.0"
 futures-util = "0.3.28"
 bytes = "1.4.0"
+schemars = "0.8"
+either = { version = "1.8.1", features = ["serde"] }
+serde-double-tag = "0.0.4"
+log = "0.4"
 
 [dev-dependencies]
 dotenvy = "0.15.7"
