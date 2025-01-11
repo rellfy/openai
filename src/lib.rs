@@ -112,8 +112,7 @@ pub type ApiResponseOrError<T> = Result<T, OpenAiError>;
 
 impl From<reqwest::Error> for OpenAiError {
     fn from(value: reqwest::Error) -> Self {
-        println!("{:?}", &value);
-        OpenAiError::new(value.to_string(), "reqwest".to_string())
+        OpenAiError::new(format!("{:?}", value), "reqwest".to_string())
     }
 }
 
