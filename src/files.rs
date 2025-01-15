@@ -351,7 +351,7 @@ mod tests {
         assert_eq!(openapi_err.error_type, "io");
         assert_eq!(
             openapi_err.message,
-            "No such file or directory (os error 2)"
+            Some("No such file or directory (os error 2)".to_string())
         )
     }
 

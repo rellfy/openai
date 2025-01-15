@@ -6,7 +6,9 @@ use std::env;
 use std::env::VarError;
 use std::sync::{LazyLock, RwLock};
 
+pub mod assistants;
 pub mod chat;
+pub mod client;
 pub mod completions;
 pub mod edits;
 pub mod embeddings;
@@ -61,7 +63,7 @@ impl Credentials {
 
 #[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct OpenAiError {
-    pub message: String,
+    pub message: Option<String>,
     #[serde(rename = "type")]
     pub error_type: String,
     pub param: Option<String>,
@@ -71,7 +73,7 @@ pub struct OpenAiError {
 impl OpenAiError {
     fn new(message: String, error_type: String) -> OpenAiError {
         OpenAiError {
-            message,
+            message: Some(message),
             error_type,
             param: None,
             code: None,
@@ -81,7 +83,12 @@ impl OpenAiError {
 
 impl std::fmt::Display for OpenAiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
+        f.write_str(
+            &self
+                .message
+                .as_ref()
+                .unwrap_or(&"empty error message".to_string()),
+        )
     }
 }
 
@@ -105,7 +112,7 @@ pub type ApiResponseOrError<T> = Result<T, OpenAiError>;
 
 impl From<reqwest::Error> for OpenAiError {
     fn from(value: reqwest::Error) -> Self {
-        OpenAiError::new(value.to_string(), "reqwest".to_string())
+        OpenAiError::new(format!("{:?}", value), "reqwest".to_string())
     }
 }
 
@@ -150,6 +157,7 @@ where
     let mut request = client.request(method, format!("{}{route}", credentials.base_url));
     request = builder(request);
     let response = request
+        .header("OpenAI-Beta", "assistants=v2")
         .header(AUTHORIZATION, format!("Bearer {}", credentials.api_key))
         .send()
         .await?;
