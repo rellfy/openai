@@ -261,6 +261,16 @@ pub struct ChatCompletionRequest {
     #[serde(skip_serializing)]
     #[builder(default)]
     credentials: Option<Credentials>,
+    /// Parameters unique to the Venice API.
+    /// https://docs.venice.ai/api-reference/api-spec
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    venice_parameters: Option<VeniceParameters>,
+}
+
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
+pub struct VeniceParameters {
+    pub include_venice_system_prompt: bool,
 }
 
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
