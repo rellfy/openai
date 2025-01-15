@@ -4,7 +4,8 @@ use crate::{ApiResponseOrError, Credentials, OpenAiError, DEFAULT_CREDENTIALS};
 use anyhow::Result;
 use reqwest::{
     header::{HeaderName, HeaderValue, AUTHORIZATION},
-    Client, Method, Response,
+    multipart::Form,
+    Client, Method, RequestBuilder, Response,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -27,6 +28,21 @@ struct OpenAiErrorWrapper {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Empty {}
+
+enum RequestBody<S> {
+    Json(S),
+    Multipart(Form),
+    None,
+}
+
+impl<S> From<Option<S>> for RequestBody<S> {
+    fn from(value: Option<S>) -> Self {
+        match value {
+            Some(value) => RequestBody::Json(value),
+            None => RequestBody::None,
+        }
+    }
+}
 
 impl OpenAiClient {
     pub fn default() -> Result<Self> {
@@ -57,47 +73,58 @@ impl OpenAiClient {
         })
     }
 
+    fn request_builder<R>(&self, method: Method, route: R) -> RequestBuilder
+    where
+        R: Into<String>,
+    {
+        let url = format!("{}{}", self.credentials.base_url, route.into());
+        log::debug!("OpenAI Request[{}] {}", method.to_string(), url);
+
+        self.client.request(method.clone(), url.clone())
+    }
+
     async fn request_inner<S, R>(
         &self,
         method: Method,
         route: R,
-        body: Option<S>,
+        body: RequestBody<S>,
     ) -> Result<Response, reqwest::Error>
     where
         R: Into<String>,
         S: Serialize,
     {
-        let url = format!("{}{}", self.credentials.base_url, route.into());
-        log::debug!("OpenAI Request[{}] {}", method.to_string(), url);
+        let mut request = self.request_builder(method.clone(), route);
 
-        let mut request = self.client.request(method.clone(), url.clone());
-
-        if let Some(body) = body {
-            request = request.json(&body);
+        match body {
+            RequestBody::Json(body) => request = request.json(&body),
+            RequestBody::Multipart(body) => request = request.multipart(body),
+            RequestBody::None => (),
         }
 
         let response = request.send().await?;
 
         log::debug!(
-            "OpenAI Response[{}] {} {url}",
+            "OpenAI Response[{}] {} {}",
             method.to_string(),
-            response.status().as_str()
+            response.status().as_str(),
+            response.url()
         );
         Ok(response)
     }
 
-    pub async fn request<S, R, T>(
+    async fn request<B, S, R, T>(
         &self,
         method: Method,
         route: R,
-        body: Option<S>,
+        body: B,
     ) -> ApiResponseOrError<T>
     where
         R: Into<String>,
+        B: Into<RequestBody<S>>,
         S: Serialize,
         T: DeserializeOwned,
     {
-        let response = self.request_inner(method, route, body).await?;
+        let response = self.request_inner(method, route, body.into()).await?;
         let api_response = if response.status().is_success() {
             response.json::<T>().await?
         } else {
@@ -116,7 +143,7 @@ impl OpenAiClient {
         R: Into<String>,
         T: DeserializeOwned,
     {
-        self.request::<(), R, T>(Method::GET, route, None).await
+        self.request::<_, (), R, T>(Method::GET, route, None).await
     }
 
     pub async fn post<S, R, T>(&self, route: R, body: S) -> ApiResponseOrError<T>
@@ -128,11 +155,20 @@ impl OpenAiClient {
         self.request(Method::POST, route, Some(body)).await
     }
 
+    pub async fn post_multipart<R, T>(&self, route: R, form: Form) -> ApiResponseOrError<T>
+    where
+        R: Into<String>,
+        T: DeserializeOwned,
+    {
+        self.request::<_, (), R, T>(Method::POST, route, RequestBody::Multipart(form))
+            .await
+    }
+
     pub async fn delete<R>(&self, route: R) -> ApiResponseOrError<Empty>
     where
         R: Into<String>,
     {
-        self.request::<(), R, Empty>(Method::DELETE, route, None)
+        self.request::<_, (), R, Empty>(Method::DELETE, route, None)
             .await
     }
 

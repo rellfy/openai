@@ -26,6 +26,8 @@ schemars = "0.8"
 either = { version = "1.8.1", features = ["serde"] }
 serde-double-tag = "0.0.4"
 log = "0.4"
+strum = { version = "0.26", features = ["derive"] }
+strum_macros = "0.26"
 
 [dev-dependencies]
 dotenvy = "0.15.7"

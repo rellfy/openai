@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use schemars::schema::RootSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{client::{Empty, OpenAiClient}, ApiResponseOrError};
+use crate::{
+    client::{Empty, OpenAiClient},
+    ApiResponseOrError,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Assistant {
@@ -58,12 +61,12 @@ pub struct FunctionProperty {
     pub type_: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct FileSearch {
-    pub max_num_results: usize,
+    pub max_num_results: Option<usize>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ToolResources {
     pub code_interpreter: Option<CodeInterpreterResources>,
     pub file_search: Option<FileSearchResources>,
