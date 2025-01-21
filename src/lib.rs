@@ -1,10 +1,11 @@
+use once_cell::sync::Lazy;
 use reqwest::multipart::Form;
 use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder, Response};
 use reqwest_eventsource::{CannotCloneRequestError, EventSource, RequestBuilderExt};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::env;
 use std::env::VarError;
-use std::sync::{LazyLock, RwLock};
+use std::sync::RwLock;
 
 pub mod assistants;
 pub mod chat;
@@ -16,10 +17,10 @@ pub mod files;
 pub mod models;
 pub mod moderations;
 
-pub static DEFAULT_BASE_URL: LazyLock<String> =
-    LazyLock::new(|| String::from("https://api.openai.com/v1/"));
-static DEFAULT_CREDENTIALS: LazyLock<RwLock<Credentials>> =
-    LazyLock::new(|| RwLock::new(Credentials::from_env()));
+pub static DEFAULT_BASE_URL: Lazy<String> =
+    Lazy::new(|| String::from("https://api.openai.com/v1/"));
+static DEFAULT_CREDENTIALS: Lazy<RwLock<Credentials>> =
+    Lazy::new(|| RwLock::new(Credentials::from_env()));
 
 /// Holds the API key and base URL for an OpenAI-compatible API.
 #[derive(Debug, Clone, Eq, PartialEq)]
