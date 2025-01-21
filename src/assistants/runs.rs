@@ -257,6 +257,7 @@ impl OpenAiClient {
 
     pub async fn poll_run(&self, mut run: Run) -> ApiResponseOrError<Run> {
         while !run.status.is_terminal() {
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             run = self
                 .get_run(run.thread_id.as_str(), run.id.as_str())
                 .await?;
