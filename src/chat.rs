@@ -208,7 +208,7 @@ pub struct ChatCompletionRequest {
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<u64>,
-    /// The maximum number of tokens allowed for the generated answer. By default, the number of tokens the model can return will be (4096 - prompt tokens).
+    /// The maximum number of tokens allowed for the generated answer.
     /// For reasoning models such as o1 and o3-mini, this does not include reasoning tokens.
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
