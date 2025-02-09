@@ -41,6 +41,10 @@ pub struct ChatCompletionChoiceDelta {
     pub delta: ChatCompletionMessageDelta,
 }
 
+fn is_none_or_empty_vec<T>(opt: &Option<Vec<T>>) -> bool {
+    opt.as_ref().map(|v| v.is_empty()).unwrap_or(true)
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Default)]
 pub struct ChatCompletionMessage {
     /// The role of the author of this message.
@@ -65,11 +69,8 @@ pub struct ChatCompletionMessage {
     /// Tool calls that the assistant is requesting to invoke.
     /// Can only be populated if the role is `Assistant`,
     /// otherwise it should be empty.
-    #[serde(
-        skip_serializing_if = "<[_]>::is_empty",
-        default = "default_tool_calls_deserialization"
-    )]
-    pub tool_calls: Vec<ToolCall>,
+    #[serde(skip_serializing_if = "is_none_or_empty_vec")]
+    pub tool_calls: Option<Vec<ToolCall>>,
 }
 
 /// Same as ChatCompletionMessage, but received during a response stream.
@@ -455,7 +456,7 @@ impl From<ChatCompletionDelta> for ChatCompletion {
                         name: choice.delta.name.clone(),
                         function_call: choice.delta.function_call.clone().map(|f| f.into()),
                         tool_call_id: None,
-                        tool_calls: Vec::new(),
+                        tool_calls: Some(Vec::new()),
                     },
                 })
                 .collect(),
