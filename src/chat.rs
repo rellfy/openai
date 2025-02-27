@@ -532,10 +532,6 @@ fn clone_default_unwrapped_option_string(string: &Option<String>) -> String {
     }
 }
 
-fn default_tool_calls_deserialization() -> Vec<ToolCall> {
-    Vec::new()
-}
-
 impl Default for ChatCompletionMessageRole {
     fn default() -> Self {
         Self::User
