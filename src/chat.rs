@@ -95,11 +95,8 @@ pub struct ChatCompletionMessageDelta {
     /// Tool calls that the assistant is requesting to invoke.
     /// Can only be populated if the role is `Assistant`,
     /// otherwise it should be empty.
-    #[serde(
-        skip_serializing_if = "<[_]>::is_empty",
-        default = "default_tool_calls_deserialization"
-    )]
-    pub tool_calls: Vec<ToolCall>,
+    #[serde(skip_serializing_if = "is_none_or_empty_vec")]
+    pub tool_calls: Option<Vec<ToolCall>>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
