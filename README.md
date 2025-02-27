@@ -5,11 +5,6 @@
 
 An unofficial Rust library for the OpenAI API.
 
-> **Warning**
->
-> There may be breaking changes between versions while in alpha.
-> See [Implementation Progress](#implementation-progress).
-
 ## Examples
 
 Examples can be found in the `examples` directory.
