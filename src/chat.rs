@@ -41,6 +41,10 @@ pub struct ChatCompletionChoiceDelta {
     pub delta: ChatCompletionMessageDelta,
 }
 
+fn is_none_or_empty_vec<T>(opt: &Option<Vec<T>>) -> bool {
+    opt.as_ref().map(|v| v.is_empty()).unwrap_or(true)
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Default)]
 pub struct ChatCompletionMessage {
     /// The role of the author of this message.
@@ -65,11 +69,8 @@ pub struct ChatCompletionMessage {
     /// Tool calls that the assistant is requesting to invoke.
     /// Can only be populated if the role is `Assistant`,
     /// otherwise it should be empty.
-    #[serde(
-        skip_serializing_if = "<[_]>::is_empty",
-        default = "default_tool_calls_deserialization"
-    )]
-    pub tool_calls: Vec<ToolCall>,
+    #[serde(skip_serializing_if = "is_none_or_empty_vec")]
+    pub tool_calls: Option<Vec<ToolCall>>,
 }
 
 /// Same as ChatCompletionMessage, but received during a response stream.
@@ -94,11 +95,8 @@ pub struct ChatCompletionMessageDelta {
     /// Tool calls that the assistant is requesting to invoke.
     /// Can only be populated if the role is `Assistant`,
     /// otherwise it should be empty.
-    #[serde(
-        skip_serializing_if = "<[_]>::is_empty",
-        default = "default_tool_calls_deserialization"
-    )]
-    pub tool_calls: Vec<ToolCall>,
+    #[serde(skip_serializing_if = "is_none_or_empty_vec")]
+    pub tool_calls: Option<Vec<ToolCall>>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
@@ -455,7 +453,7 @@ impl From<ChatCompletionDelta> for ChatCompletion {
                         name: choice.delta.name.clone(),
                         function_call: choice.delta.function_call.clone().map(|f| f.into()),
                         tool_call_id: None,
-                        tool_calls: Vec::new(),
+                        tool_calls: Some(Vec::new()),
                     },
                 })
                 .collect(),
@@ -562,7 +560,7 @@ mod tests {
                 name: None,
                 function_call: None,
                 tool_call_id: None,
-                tool_calls: Vec::new(),
+                tool_calls: Some(Vec::new()),
             }],
         )
         .temperature(0.0)
@@ -603,7 +601,7 @@ mod tests {
                 name: None,
                 function_call: None,
                 tool_call_id: None,
-                tool_calls: Vec::new(),
+                tool_calls: Some(Vec::new()),
             }],
         )
         // Determinism currently comes from temperature 0, not seed.
@@ -640,7 +638,7 @@ mod tests {
                 name: None,
                 function_call: None,
                 tool_call_id: None,
-                tool_calls: Vec::new(),
+                tool_calls: Some(Vec::new()),
             }],
         )
         .temperature(0.0)
@@ -678,7 +676,7 @@ mod tests {
                     name: None,
                     function_call: None,
                     tool_call_id: None,
-                    tool_calls: Vec::new(),
+                    tool_calls: Some(Vec::new()),
                 }
             ]
         ).functions([ChatCompletionFunctionDefinition {
@@ -747,7 +745,7 @@ mod tests {
                 name: None,
                 function_call: None,
                 tool_call_id: None,
-                tool_calls: Vec::new(),
+                tool_calls: Some(Vec::new()),
             }],
         )
         .temperature(0.0)
@@ -831,7 +829,7 @@ mod tests {
                     name: None,
                     function_call: None,
                     tool_call_id: None,
-                    tool_calls: Vec::new(),
+                    tool_calls: Some(Vec::new()),
                 },
                 ChatCompletionMessage {
                     role: ChatCompletionMessageRole::Assistant,
@@ -839,14 +837,14 @@ mod tests {
                     name: None,
                     function_call: None,
                     tool_call_id: None,
-                    tool_calls: vec![ToolCall {
+                    tool_calls: Some(vec![ToolCall {
                         id: "the_tool_call".to_string(),
                         r#type: "function".to_string(),
                         function: ToolCallFunction {
                             name: "mul".to_string(),
                             arguments: "not_required_to_be_valid_here".to_string(),
                         },
-                    }],
+                    }]),
                 },
                 ChatCompletionMessage {
                     role: ChatCompletionMessageRole::Tool,
@@ -854,7 +852,7 @@ mod tests {
                     name: None,
                     function_call: None,
                     tool_call_id: Some("the_tool_call".to_owned()),
-                    tool_calls: Vec::new(),
+                    tool_calls: Some(Vec::new()),
                 },
             ],
         )
