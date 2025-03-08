@@ -27,8 +27,16 @@ pub struct Credentials {
 }
 
 impl Credentials {
+    /// Creates credentials with the given API key and base URL.
+    ///
+    /// If the base URL is empty, it will use the default.
     pub fn new(api_key: impl Into<String>, base_url: impl Into<String>) -> Self {
-        let base_url = parse_base_url(base_url.into());
+        let base_url = base_url.into();
+        let base_url = if base_url.is_empty() {
+            DEFAULT_BASE_URL.clone()
+        } else {
+            parse_base_url(base_url)
+        };
         Self {
             api_key: api_key.into(),
             base_url,
