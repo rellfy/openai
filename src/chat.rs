@@ -278,22 +278,52 @@ pub struct VeniceParameters {
 }
 
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
+pub struct ChatCompletionResponseFormatJsonSchema {
+    /// The name of the response format. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64.
+    pub name: String,
+    /// A description of what the response format is for, used by the model to determine how to respond in the format.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// The schema for the response format, described as a JSON Schema object.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schema: Option<Value>,
+    /// Whether to enable strict schema adherence when generating the output.
+    /// If set to true, the model will always follow the exact schema defined in the schema field.
+    /// Only a subset of JSON Schema is supported when strict is true.
+    /// To learn more, read the [Structured Outputs guide](https://platform.openai.com/docs/guides/structured-outputs).
+    ///
+    /// defaults to false
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strict: Option<bool>,
+}
+
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct ChatCompletionResponseFormat {
-    /// Must be one of text or json_object (defaults to text)
+    /// Must be one of text, json_object, or json_schema (defaults to text)
     #[serde(rename = "type")]
     typ: String,
+    /// JSON schema for the response format
+    #[serde(skip_serializing_if = "Option::is_none")]
+    json_schema: Option<ChatCompletionResponseFormatJsonSchema>,
 }
 
 impl ChatCompletionResponseFormat {
-    pub fn json_object() -> Self {
-        ChatCompletionResponseFormat {
-            typ: "json_object".to_string(),
-        }
-    }
-
     pub fn text() -> Self {
         ChatCompletionResponseFormat {
             typ: "text".to_string(),
+            json_schema: None,
+        }
+    }
+    pub fn json_object() -> Self {
+        ChatCompletionResponseFormat {
+            typ: "json_object".to_string(),
+            json_schema: None,
+        }
+    }
+    pub fn json_schema(schema: ChatCompletionResponseFormatJsonSchema) -> Self {
+        ChatCompletionResponseFormat {
+            typ: "json_schema".to_string(),
+            json_schema: Some(schema),
         }
     }
 }
