@@ -6,6 +6,7 @@ use derive_builder::Builder;
 use futures_util::StreamExt;
 use reqwest::Method;
 use reqwest_eventsource::{CannotCloneRequestError, Event, EventSource};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -295,6 +296,25 @@ pub struct ChatCompletionResponseFormatJsonSchema {
     /// defaults to false
     #[serde(skip_serializing_if = "Option::is_none")]
     pub strict: Option<bool>,
+}
+
+impl ChatCompletionResponseFormatJsonSchema {
+    pub fn new<T: JsonSchema>(strict: bool) -> Self {
+        let mut settings = schemars::r#gen::SchemaSettings::default();
+        settings.option_add_null_type = true;
+        settings.option_nullable = false;
+        settings.inline_subschemas = true;
+        let mut generator = schemars::SchemaGenerator::new(settings);
+        let mut schema = T::json_schema(&mut generator).into_object();
+        let description = schema.metadata().description.clone();
+        let schema = serde_json::to_value(schema).expect("unreachable");
+        ChatCompletionResponseFormatJsonSchema {
+            name: T::schema_name(),
+            description,
+            schema: Some(schema),
+            strict: Some(strict),
+        }
+    }
 }
 
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
