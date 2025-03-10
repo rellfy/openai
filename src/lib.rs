@@ -19,6 +19,22 @@ pub static DEFAULT_BASE_URL: LazyLock<String> =
 static DEFAULT_CREDENTIALS: LazyLock<RwLock<Credentials>> =
     LazyLock::new(|| RwLock::new(Credentials::from_env()));
 
+pub trait Tokens {
+    fn tokens(&self) -> u64;
+}
+
+impl Tokens for String {
+    fn tokens(&self) -> u64 {
+        self.len() as u64 / 4
+    }
+}
+
+impl Tokens for str {
+    fn tokens(&self) -> u64 {
+        self.len() as u64 / 4
+    }
+}
+
 /// Holds the API key and base URL for an OpenAI-compatible API.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Credentials {

@@ -2,7 +2,7 @@
 pub mod structured_output;
 
 use super::{openai_post, ApiResponseOrError, Credentials, Usage};
-use crate::openai_request_stream;
+use crate::{openai_request_stream, Tokens};
 use derive_builder::Builder;
 use derive_more::From;
 use futures_util::StreamExt;
@@ -67,6 +67,19 @@ pub struct ImageUrl {
     pub detail: ImageDetail,
 }
 
+impl Tokens for ImageUrl {
+    // low enables the "low res" mode. The model receives a low-resolution 512px x 512px version of the image.
+    // It represents the image with a budget of 85 tokens. This allows the API to return faster responses and consume fewer input tokens for use cases that do not require high detail.
+    // high enables "high res" mode, which first lets the model see the low-resolution image (using 85 tokens) and then creates detailed crops using 170 tokens for each 512px x 512px tile.
+    fn tokens(&self) -> u64 {
+        match self.detail {
+            ImageDetail::Auto => (85 + 170) * 4,
+            ImageDetail::High => (85 + 170) * 4,
+            ImageDetail::Low => 85 * 4,
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Default)]
 pub struct InputAudio {
     /// Base64 encoded audio data.
@@ -75,10 +88,24 @@ pub struct InputAudio {
     pub format: String,
 }
 
+impl Tokens for InputAudio {
+    fn tokens(&self) -> u64 {
+        self.data.tokens()
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum TextContent {
     Text { text: String },
+}
+
+impl Tokens for TextContent {
+    fn tokens(&self) -> u64 {
+        match self {
+            TextContent::Text { text } => text.tokens(),
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
@@ -89,11 +116,30 @@ pub enum UserContent {
     ImputAudio { input_audio: InputAudio },
 }
 
+impl Tokens for UserContent {
+    fn tokens(&self) -> u64 {
+        match self {
+            UserContent::Text { text } => text.tokens(),
+            UserContent::ImageUrl { image_url } => image_url.tokens(),
+            UserContent::ImputAudio { input_audio } => input_audio.tokens(),
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, From)]
 #[serde(untagged)]
 pub enum StringOrArray<T> {
     String(String),
     Array(Vec<T>),
+}
+
+impl<T: Tokens> Tokens for StringOrArray<T> {
+    fn tokens(&self) -> u64 {
+        match self {
+            StringOrArray::String(s) => s.tokens(),
+            StringOrArray::Array(a) => a.iter().map(|t| t.tokens()).sum(),
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, From)]
@@ -126,6 +172,18 @@ pub enum ChatMessage {
     },
 }
 
+impl Tokens for ChatMessage {
+    fn tokens(&self) -> u64 {
+        match self {
+            ChatMessage::User { content, .. } => content.tokens(),
+            ChatMessage::Assistant(message) => message.tokens(),
+            ChatMessage::Tool { content, .. } => content.tokens(),
+            ChatMessage::Function { content, .. } => content.as_ref().map_or(0, |c| c.tokens()),
+            ChatMessage::Developer { content, .. } => content.tokens(),
+            ChatMessage::System { content, .. } => content.tokens(),
+        }
+    }
+}
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Default)]
 pub struct Audio {
     pub id: String,
@@ -135,6 +193,12 @@ pub struct Audio {
     pub data: String,
     #[serde(skip_serializing)]
     pub transcript: String,
+}
+
+impl Tokens for Audio {
+    fn tokens(&self) -> u64 {
+        self.data.tokens() + self.transcript.tokens()
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Default)]
@@ -164,6 +228,25 @@ pub struct ChatCompletionMessage {
     /// [Learn more](https://platform.openai.com/docs/guides/audio).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audio: Option<Audio>,
+}
+
+impl Tokens for ChatCompletionMessage {
+    fn tokens(&self) -> u64 {
+        let mut tokens = 0;
+        if let Some(content) = &self.content {
+            tokens += content.tokens();
+        }
+        if let Some(audio) = &self.audio {
+            tokens += audio.tokens();
+        }
+        if let Some(function_call) = &self.function_call {
+            tokens += function_call.tokens();
+        }
+        if let Some(tool_calls) = &self.tool_calls {
+            tokens += tool_calls.iter().map(|t| t.tokens()).sum::<u64>();
+        }
+        tokens
+    }
 }
 
 /// Same as ChatCompletionMessage, but received during a response stream.
@@ -278,6 +361,12 @@ pub struct ToolCall {
     pub function: ToolCallFunction,
 }
 
+impl Tokens for ToolCall {
+    fn tokens(&self) -> u64 {
+        self.function.tokens()
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 pub struct ToolCallDelta {
     pub index: i64,
@@ -301,6 +390,12 @@ pub struct ToolCallFunction {
     pub arguments: String,
 }
 
+impl Tokens for ToolCallFunction {
+    fn tokens(&self) -> u64 {
+        self.arguments.tokens()
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct ChatCompletionFunctionDefinition {
     /// The name of the function
@@ -322,6 +417,12 @@ pub struct ChatCompletionFunctionCall {
     /// The arguments that ChatGPT called (formatted in JSON)
     /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
     pub arguments: String,
+}
+
+impl Tokens for ChatCompletionFunctionCall {
+    fn tokens(&self) -> u64 {
+        self.arguments.tokens()
+    }
 }
 
 /// Same as ChatCompletionFunctionCall, but received during a response stream.
@@ -546,6 +647,12 @@ pub struct ChatCompletionRequest {
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     venice_parameters: Option<VeniceParameters>,
+}
+
+impl Tokens for ChatCompletionRequest {
+    fn tokens(&self) -> u64 {
+        self.messages.iter().map(|m| m.tokens()).sum()
+    }
 }
 
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
@@ -1075,9 +1182,7 @@ mod tests {
         let chat_completion = ChatCompletion::builder(
             "gpt-4o-mini",
             [ChatMessage::User {
-                content: "Create a DND character, don't use the dont_use_this_property field"
-                    .to_string()
-                    .into(),
+                content: "Create a DND character".to_string().into(),
                 name: None,
             }],
         )
