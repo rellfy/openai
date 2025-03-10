@@ -90,6 +90,7 @@ pub enum UserContent {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, From)]
+#[serde(untagged)]
 pub enum StringOrArray<T> {
     String(String),
     Array(Vec<T>),
@@ -1162,24 +1163,20 @@ mod tests {
         .temperature(0.0)
         .seed(1337u64)
         .credentials(credentials)
-        .build()
+        .create()
+        .await
         .unwrap();
 
-        println!("{:?}", chat_completion);
-        // .create()
-        // .await
-        // .unwrap();
-
-        // assert_eq!(
-        //     chat_completion
-        //         .choices
-        //         .first()
-        //         .unwrap()
-        //         .message
-        //         .content
-        //         .as_ref()
-        //         .unwrap(),
-        //     "25903.06"
-        // );
+        assert_eq!(
+            chat_completion
+                .choices
+                .first()
+                .unwrap()
+                .message
+                .content
+                .as_ref()
+                .unwrap(),
+            "25903.06"
+        );
     }
 }
