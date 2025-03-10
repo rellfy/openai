@@ -61,6 +61,8 @@ pub struct ChatCompletionMessage {
     /// The function that ChatGPT called. This should be "None" usually, and is returned by ChatGPT and not provided by the developer
     ///
     /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
+    ///
+    /// Deprecated, use `tool_calls` instead
     #[serde(skip_serializing_if = "Option::is_none")]
     pub function_call: Option<ChatCompletionFunctionCall>,
     /// Tool call that this message is responding to.
@@ -87,6 +89,8 @@ pub struct ChatCompletionMessageDelta {
     /// The function that ChatGPT called
     ///
     /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
+    ///
+    /// Deprecated, use `tool_calls` instead
     #[serde(skip_serializing_if = "Option::is_none")]
     pub function_call: Option<ChatCompletionFunctionCallDelta>,
     /// Tool call that this message is responding to.
@@ -97,11 +101,88 @@ pub struct ChatCompletionMessageDelta {
     /// Can only be populated if the role is `Assistant`,
     /// otherwise it should be empty.
     #[serde(skip_serializing_if = "is_none_or_empty_vec")]
-    pub tool_calls: Option<Vec<ToolCall>>,
+    pub tool_calls: Option<Vec<ToolCallDelta>>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+pub struct ChatCompletionTool {
+    /// The type of the tool. Currently, only `function` is supported.
+    pub r#type: String,
+    /// The name of the tool.
+    pub function: ToolCallFunctionDefinition,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+pub struct ToolCallFunctionDefinition {
+    /// A description of what the function does, used by the model to choose when and how to call the function.
+    pub description: Option<String>,
+    /// The name of the function to be called. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64.
+    pub name: String,
+    /// The parameters the functions accepts, described as a JSON Schema object.
+    /// See the [guide](https://platform.openai.com/docs/guides/function-calling) for examples,
+    /// and the [JSON Schema reference](https://json-schema.org/understanding-json-schema/reference) for documentation about the format.
+    /// Omitting `parameters` defines a function with an empty parameter list.
+    pub parameters: Option<Value>,
+    /// Whether to enable strict schema adherence when generating the function call.
+    /// If set to true, the model will follow the exact schema defined in the `parameters` field.
+    /// Only a subset of JSON Schema is supported when `strict` is `true`.
+    /// Learn more about Structured Outputs in the [function calling guide](https://platform.openai.com/docs/api-reference/chat/docs/guides/function-calling).
+    pub strict: Option<bool>,
+}
+
+impl ToolCallFunctionDefinition {
+    pub fn new<T: JsonSchema>(strict: Option<bool>) -> Self {
+        let mut settings = schemars::r#gen::SchemaSettings::default();
+        settings.option_add_null_type = true;
+        settings.option_nullable = false;
+        settings.inline_subschemas = true;
+        let mut generator = schemars::SchemaGenerator::new(settings);
+        let mut schema = T::json_schema(&mut generator).into_object();
+        let description = schema.metadata().description.clone();
+        let schema = serde_json::to_value(schema).expect("unreachable");
+        ToolCallFunctionDefinition {
+            description,
+            name: T::schema_name(),
+            parameters: Some(schema),
+            strict,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+pub enum ToolChoice {
+    /// `none` means the model will not call any tool and instead generates a message.
+    /// `auto` means the model can pick between generating a message or calling one or more tools.
+    /// `required` means the model must call one or more tools.
+    Mode(String),
+    /// The model will call the function with the given name.
+    Function {
+        /// The type of the tool. Currently, only `function` is supported.
+        r#type: String,
+        /// The function that the model called.
+        function: FunctionChoice,
+    },
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+pub struct FunctionChoice {
+    /// The name of the function to call.
+    name: String,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 pub struct ToolCall {
+    /// The ID of the tool call.
+    pub id: String,
+    /// The type of the tool. Currently, only `function` is supported.
+    pub r#type: String,
+    /// The function that the model called.
+    pub function: ToolCallFunction,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+pub struct ToolCallDelta {
+    pub index: i64,
     /// The ID of the tool call.
     pub id: String,
     /// The type of the tool. Currently, only `function` is supported.
@@ -166,6 +247,14 @@ pub enum ChatCompletionMessageRole {
     Developer,
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, Eq, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum ChatCompletionReasoningEffort {
+    Low,
+    Medium,
+    High,
+}
+
 #[derive(Serialize, Builder, Debug, Clone)]
 #[builder(derive(Clone, Debug, PartialEq))]
 #[builder(pattern = "owned")]
@@ -177,6 +266,12 @@ pub struct ChatCompletionRequest {
     model: String,
     /// The messages to generate chat completions for, in the [chat format](https://platform.openai.com/docs/guides/chat/introduction).
     messages: Vec<ChatCompletionMessage>,
+    /// Constrains effort on reasoning for (reasoning models)[https://platform.openai.com/docs/guides/reasoning].
+    /// Currently supported values are low, medium, and high (Defaults to medium).
+    /// Reducing reasoning effort can result in faster responses and fewer tokens used on reasoning in a response.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reasoning_effort: Option<ChatCompletionReasoningEffort>,
     /// What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
     ///
     /// We generally recommend altering this or `top_p` but not both.
@@ -205,6 +300,7 @@ pub struct ChatCompletionRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     seed: Option<u64>,
     /// The maximum number of tokens allowed for the generated answer. By default, the number of tokens the model can return will be (4096 - prompt tokens).
+    #[deprecated(note = "Use max_completion_tokens instead")]
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<u64>,
@@ -235,12 +331,32 @@ pub struct ChatCompletionRequest {
     #[builder(default)]
     #[serde(skip_serializing_if = "String::is_empty")]
     user: String,
+    /// A list of tools the model may call. Currently, only functions are supported as a tool. Use this to provide a list of functions the model may generate JSON inputs for. A max of 128 functions are supported.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    tools: Vec<ChatCompletionTool>,
+    /// Controls which (if any) tool is called by the model.
+    /// `none` means the model will not call any tool and instead generates a message.
+    /// `auto` means the model can pick between generating a message or calling one or more tools.
+    /// `required` means the model must call one or more tools.
+    /// Specifying a particular tool via `{"type": "function", "function": {"name": "my_function"}}` forces the model to call that tool.
+    ///
+    /// `none` is the default when no tools are present. `auto` is the default if tools are present.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_choice: Option<ToolChoice>,
+    /// Whether to enable parallel function calling during tool use.
+    /// Defaults to true.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    parallel_tool_calls: Option<bool>,
     /// Describe functions that ChatGPT can call
     /// The latest models of ChatGPT support function calling, which allows you to define functions that can be called from the prompt.
     /// For example, you can define a function called "get_weather" that returns the weather in a given city
     ///
     /// [Function calling API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-functions)
     /// [See more information about function calling in ChatGPT.](https://platform.openai.com/docs/guides/gpt/function-calling)
+    #[deprecated(note = "Use tools instead")]
     #[builder(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     functions: Vec<ChatCompletionFunctionDefinition>,
@@ -253,6 +369,7 @@ pub struct ChatCompletionRequest {
     /// - Specifying a particular function via {"name":\ "my_function"} forces the model to call that function.
     ///
     /// "none" is the default when no functions are present. "auto" is the default if functions are present.
+    #[deprecated(note = "Use tool_choice instead")]
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     function_call: Option<Value>,
@@ -299,7 +416,7 @@ pub struct ChatCompletionResponseFormatJsonSchema {
 }
 
 impl ChatCompletionResponseFormatJsonSchema {
-    pub fn new<T: JsonSchema>(strict: bool) -> Self {
+    pub fn new<T: JsonSchema>(strict: Option<bool>) -> Self {
         let mut settings = schemars::r#gen::SchemaSettings::default();
         settings.option_add_null_type = true;
         settings.option_nullable = false;
@@ -312,42 +429,32 @@ impl ChatCompletionResponseFormatJsonSchema {
             name: T::schema_name(),
             description,
             schema: Some(schema),
-            strict: Some(strict),
+            strict,
         }
     }
 }
 
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
-pub struct ChatCompletionResponseFormat {
-    /// Must be one of text, json_object, or json_schema (defaults to text)
-    #[serde(rename = "type")]
-    typ: String,
-    /// JSON schema for the response format
-    #[serde(skip_serializing_if = "Option::is_none")]
-    json_schema: Option<ChatCompletionResponseFormatJsonSchema>,
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ChatCompletionResponseFormat {
+    Text,
+    JsonObject,
+    JsonSchema {
+        json_schema: ChatCompletionResponseFormatJsonSchema,
+    },
 }
 
 impl ChatCompletionResponseFormat {
     pub fn text() -> Self {
-        ChatCompletionResponseFormat {
-            typ: "text".to_string(),
-            json_schema: None,
-        }
+        ChatCompletionResponseFormat::Text
     }
     pub fn json_object() -> Self {
-        ChatCompletionResponseFormat {
-            typ: "json_object".to_string(),
-            json_schema: None,
-        }
+        ChatCompletionResponseFormat::JsonObject
     }
-    pub fn json_schema(schema: ChatCompletionResponseFormatJsonSchema) -> Self {
-        ChatCompletionResponseFormat {
-            typ: "json_schema".to_string(),
-            json_schema: Some(schema),
-        }
+    pub fn json_schema(json_schema: ChatCompletionResponseFormatJsonSchema) -> Self {
+        ChatCompletionResponseFormat::JsonSchema { json_schema }
     }
 }
-
 impl<C> ChatCompletionGeneric<C> {
     pub fn builder(
         model: &str,
@@ -610,7 +717,7 @@ mod tests {
             }],
         )
         .temperature(0.0)
-        .response_format(ChatCompletionResponseFormat::text())
+        .response_format(ChatCompletionResponseFormat::Text)
         .credentials(credentials)
         .create()
         .await
@@ -796,7 +903,7 @@ mod tests {
         )
         .temperature(0.0)
         .seed(1337u64)
-        .response_format(ChatCompletionResponseFormat::json_object())
+        .response_format(ChatCompletionResponseFormat::JsonObject)
         .credentials(credentials)
         .create()
         .await
@@ -897,7 +1004,7 @@ mod tests {
                     content: Some("the result is 25903.061423199997".to_string()),
                     name: None,
                     function_call: None,
-                    tool_call_id: Some("the_tool_call".to_owned()),
+                    tool_call_id: Some("the_tool_call".to_string()),
                     tool_calls: Some(Vec::new()),
                 },
             ],
