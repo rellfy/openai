@@ -1,9 +1,6 @@
 use dotenvy::dotenv;
 use openai::chat::{ChatCompletion, ChatCompletionDelta};
-use openai::{
-    chat::{ChatCompletionMessage, ChatCompletionMessageRole},
-    Credentials,
-};
+use openai::{chat::ChatMessage, Credentials};
 use std::io::{stdin, stdout, Write};
 use tokio::sync::mpsc::Receiver;
 
@@ -13,10 +10,11 @@ async fn main() {
     dotenv().unwrap();
     let credentials = Credentials::from_env();
 
-    let mut messages = vec![ChatCompletionMessage {
-        role: ChatCompletionMessageRole::System,
-        content: Some("You're an AI that replies to each message verbosely.".to_string()),
-        ..Default::default()
+    let mut messages = vec![ChatMessage::System {
+        content: "You're an AI that replies to each message verbosely."
+            .to_string()
+            .into(),
+        name: None,
     }];
 
     loop {
@@ -26,10 +24,9 @@ async fn main() {
         let mut user_message_content = String::new();
 
         stdin().read_line(&mut user_message_content).unwrap();
-        messages.push(ChatCompletionMessage {
-            role: ChatCompletionMessageRole::User,
-            content: Some(user_message_content),
-            ..Default::default()
+        messages.push(ChatMessage::User {
+            content: user_message_content.into(),
+            name: None,
         });
 
         let chat_stream = ChatCompletionDelta::builder("gpt-3.5-turbo", messages.clone())
@@ -41,7 +38,7 @@ async fn main() {
         let chat_completion: ChatCompletion = listen_for_tokens(chat_stream).await;
         let returned_message = chat_completion.choices.first().unwrap().message.clone();
 
-        messages.push(returned_message);
+        messages.push(returned_message.into());
     }
 }
 
@@ -49,9 +46,6 @@ async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) -> Ch
     let mut merged: Option<ChatCompletionDelta> = None;
     while let Some(delta) = chat_stream.recv().await {
         let choice = &delta.choices[0];
-        if let Some(role) = &choice.delta.role {
-            print!("{:#?}: ", role);
-        }
         if let Some(content) = &choice.delta.content {
             print!("{}", content);
         }

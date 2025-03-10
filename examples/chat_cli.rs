@@ -1,6 +1,6 @@
 use dotenvy::dotenv;
 use openai::{
-    chat::{ChatCompletion, ChatCompletionMessage, ChatCompletionMessageRole},
+    chat::{ChatCompletion, ChatMessage},
     Credentials,
 };
 use std::io::{stdin, stdout, Write};
@@ -11,10 +11,9 @@ async fn main() {
     dotenv().unwrap();
     let credentials = Credentials::from_env();
 
-    let mut messages = vec![ChatCompletionMessage {
-        role: ChatCompletionMessageRole::System,
-        content: Some("You are a large language model built into a command line interface as an example of what the `openai` Rust library made by Valentine Briese can do.".to_string()),
-        ..Default::default()
+    let mut messages = vec![ChatMessage::System {
+        content: "You are a large language model built into a command line interface as an example of what the `openai` Rust library made by Valentine Briese can do.".to_string().into(),
+        name: None,
     }];
 
     loop {
@@ -24,10 +23,9 @@ async fn main() {
         let mut user_message_content = String::new();
 
         stdin().read_line(&mut user_message_content).unwrap();
-        messages.push(ChatCompletionMessage {
-            role: ChatCompletionMessageRole::User,
-            content: Some(user_message_content),
-            ..Default::default()
+        messages.push(ChatMessage::User {
+            content: user_message_content.into(),
+            name: None,
         });
 
         let chat_completion = ChatCompletion::builder("gpt-3.5-turbo", messages.clone())
@@ -38,11 +36,10 @@ async fn main() {
         let returned_message = chat_completion.choices.first().unwrap().message.clone();
 
         println!(
-            "{:#?}: {}",
-            &returned_message.role,
+            "Assistant: {}",
             &returned_message.content.clone().unwrap().trim()
         );
 
-        messages.push(returned_message);
+        messages.push(returned_message.into());
     }
 }

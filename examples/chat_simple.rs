@@ -1,6 +1,6 @@
 use dotenvy::dotenv;
 use openai::{
-    chat::{ChatCompletion, ChatCompletionMessage, ChatCompletionMessageRole},
+    chat::{ChatCompletion, ChatMessage},
     Credentials,
 };
 
@@ -11,15 +11,13 @@ async fn main() {
     // Relies on OPENAI_KEY and optionally OPENAI_BASE_URL.
     let credentials = Credentials::from_env();
     let messages = vec![
-        ChatCompletionMessage {
-            role: ChatCompletionMessageRole::System,
-            content: Some("You are a helpful assistant.".to_string()),
-            ..Default::default()
+        ChatMessage::System {
+            content: "You are a helpful assistant.".to_string().into(),
+            name: None,
         },
-        ChatCompletionMessage {
-            role: ChatCompletionMessageRole::User,
-            content: Some("Tell me a random crab fact".to_string()),
-            ..Default::default()
+        ChatMessage::User {
+            content: "Tell me a random crab fact".to_string().into(),
+            name: None,
         },
     ];
     let chat_completion = ChatCompletion::builder("gpt-4o", messages.clone())
@@ -29,9 +27,5 @@ async fn main() {
         .unwrap();
     let returned_message = chat_completion.choices.first().unwrap().message.clone();
     // Assistant: Sure! Here's a random crab fact: Crabs communicate with each other by drumming or waving their pincers.
-    println!(
-        "{:#?}: {}",
-        returned_message.role,
-        returned_message.content.unwrap().trim()
-    );
+    println!("Assistant: {}", returned_message.content.unwrap().trim());
 }
