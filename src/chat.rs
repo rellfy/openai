@@ -1,16 +1,17 @@
 //! Given a chat conversation, the model will return a chat completion response.
 
 use super::{openai_post, ApiResponseOrError, Credentials, Usage};
-use crate::openai_request_stream;
+use crate::{openai_request_stream, Tokens};
 use derive_builder::Builder;
+use derive_more::From;
 use futures_util::StreamExt;
 use reqwest::Method;
 use reqwest_eventsource::{CannotCloneRequestError, Event, EventSource};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
-
 /// A full chat completion.
 pub type ChatCompletion = ChatCompletionGeneric<ChatCompletionChoice>;
 
@@ -46,61 +47,339 @@ fn is_none_or_empty_vec<T>(opt: &Option<Vec<T>>) -> bool {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ImageDetail {
+    #[default]
+    Auto,
+    High,
+    Low,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Default)]
+pub struct ImageUrl {
+    /// Either a URL of the image or the base64 encoded image data.
+    pub url: String,
+    /// Specifies the detail level of the image. Learn more in the [Vision guide](https://platform.openai.com/docs/guides/vision).
+    pub detail: ImageDetail,
+}
+
+impl Tokens for ImageUrl {
+    // low enables the "low res" mode. The model receives a low-resolution 512px x 512px version of the image.
+    // It represents the image with a budget of 85 tokens. This allows the API to return faster responses and consume fewer input tokens for use cases that do not require high detail.
+    // high enables "high res" mode, which first lets the model see the low-resolution image (using 85 tokens) and then creates detailed crops using 170 tokens for each 512px x 512px tile.
+    fn tokens(&self) -> u64 {
+        match self.detail {
+            ImageDetail::Auto => (85 + 170) * 4,
+            ImageDetail::High => (85 + 170) * 4,
+            ImageDetail::Low => 85 * 4,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Default)]
+pub struct InputAudio {
+    /// Base64 encoded audio data.
+    pub data: String,
+    /// The format of the encoded audio data. Currently supports "wav" and "mp3".
+    pub format: String,
+}
+
+impl Tokens for InputAudio {
+    fn tokens(&self) -> u64 {
+        self.data.tokens()
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum TextContent {
+    Text { text: String },
+}
+
+impl Tokens for TextContent {
+    fn tokens(&self) -> u64 {
+        match self {
+            TextContent::Text { text } => text.tokens(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum UserContent {
+    Text { text: String },
+    ImageUrl { image_url: ImageUrl },
+    ImputAudio { input_audio: InputAudio },
+}
+
+impl Tokens for UserContent {
+    fn tokens(&self) -> u64 {
+        match self {
+            UserContent::Text { text } => text.tokens(),
+            UserContent::ImageUrl { image_url } => image_url.tokens(),
+            UserContent::ImputAudio { input_audio } => input_audio.tokens(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, From)]
+#[serde(untagged)]
+pub enum StringOrArray<T> {
+    String(String),
+    Array(Vec<T>),
+}
+
+impl<T: Tokens> Tokens for StringOrArray<T> {
+    fn tokens(&self) -> u64 {
+        match self {
+            StringOrArray::String(s) => s.tokens(),
+            StringOrArray::Array(a) => a.iter().map(|t| t.tokens()).sum(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, From)]
+#[serde(tag = "role", rename_all = "snake_case")]
+pub enum ChatMessage {
+    #[from(skip)]
+    Developer {
+        content: StringOrArray<TextContent>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        name: Option<String>,
+    },
+    System {
+        content: StringOrArray<TextContent>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        name: Option<String>,
+    },
+    User {
+        content: StringOrArray<UserContent>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        name: Option<String>,
+    },
+    Assistant(ChatCompletionMessage),
+    Tool {
+        content: StringOrArray<TextContent>,
+        tool_call_id: String,
+    },
+    Function {
+        content: Option<String>,
+        name: String,
+    },
+}
+
+impl Tokens for ChatMessage {
+    fn tokens(&self) -> u64 {
+        match self {
+            ChatMessage::User { content, .. } => content.tokens(),
+            ChatMessage::Assistant(message) => message.tokens(),
+            ChatMessage::Tool { content, .. } => content.tokens(),
+            ChatMessage::Function { content, .. } => content.as_ref().map_or(0, |c| c.tokens()),
+            ChatMessage::Developer { content, .. } => content.tokens(),
+            ChatMessage::System { content, .. } => content.tokens(),
+        }
+    }
+}
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Default)]
+pub struct Audio {
+    pub id: String,
+    #[serde(skip_serializing)]
+    pub expires_at: i64,
+    #[serde(skip_serializing)]
+    pub data: String,
+    #[serde(skip_serializing)]
+    pub transcript: String,
+}
+
+impl Tokens for Audio {
+    fn tokens(&self) -> u64 {
+        self.data.tokens() + self.transcript.tokens()
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Default)]
 pub struct ChatCompletionMessage {
-    /// The role of the author of this message.
-    pub role: ChatCompletionMessageRole,
     /// The contents of the message
     ///
     /// This is always required for all messages, except for when ChatGPT calls
     /// a function.
-    pub content: Option<String>,
-    /// The name of the user in a multi-user chat
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    pub content: Option<String>,
+    /// The refusal message generated by the model.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refusal: Option<String>,
     /// The function that ChatGPT called. This should be "None" usually, and is returned by ChatGPT and not provided by the developer
     ///
     /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
+    ///
+    /// Deprecated, use `tool_calls` instead
     #[serde(skip_serializing_if = "Option::is_none")]
     pub function_call: Option<ChatCompletionFunctionCall>,
-    /// Tool call that this message is responding to.
-    /// Required if the role is `Tool`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tool_call_id: Option<String>,
     /// Tool calls that the assistant is requesting to invoke.
     /// Can only be populated if the role is `Assistant`,
     /// otherwise it should be empty.
     #[serde(skip_serializing_if = "is_none_or_empty_vec")]
     pub tool_calls: Option<Vec<ToolCall>>,
+    /// If the audio output modality is requested, this object contains data about the audio response from the model.
+    /// [Learn more](https://platform.openai.com/docs/guides/audio).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub audio: Option<Audio>,
+}
+
+impl Tokens for ChatCompletionMessage {
+    fn tokens(&self) -> u64 {
+        let mut tokens = 0;
+        if let Some(content) = &self.content {
+            tokens += content.tokens();
+        }
+        if let Some(audio) = &self.audio {
+            tokens += audio.tokens();
+        }
+        if let Some(function_call) = &self.function_call {
+            tokens += function_call.tokens();
+        }
+        if let Some(tool_calls) = &self.tool_calls {
+            tokens += tool_calls.iter().map(|t| t.tokens()).sum::<u64>();
+        }
+        tokens
+    }
 }
 
 /// Same as ChatCompletionMessage, but received during a response stream.
 #[derive(Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct ChatCompletionMessageDelta {
-    /// The role of the author of this message.
-    pub role: Option<ChatCompletionMessageRole>,
     /// The contents of the message
-    pub content: Option<String>,
-    /// The name of the user in a multi-user chat
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    pub content: Option<String>,
+    /// The refusal message generated by the model.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refusal: Option<String>,
     /// The function that ChatGPT called
     ///
     /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
+    ///
+    /// Deprecated, use `tool_calls` instead
     #[serde(skip_serializing_if = "Option::is_none")]
     pub function_call: Option<ChatCompletionFunctionCallDelta>,
-    /// Tool call that this message is responding to.
-    /// Required if the role is `Tool`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tool_call_id: Option<String>,
     /// Tool calls that the assistant is requesting to invoke.
     /// Can only be populated if the role is `Assistant`,
     /// otherwise it should be empty.
     #[serde(skip_serializing_if = "is_none_or_empty_vec")]
-    pub tool_calls: Option<Vec<ToolCall>>,
+    pub tool_calls: Option<Vec<ToolCallDelta>>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+pub struct ChatCompletionTool {
+    /// The type of the tool. Currently, only `function` is supported.
+    pub r#type: String,
+    /// The name of the tool.
+    pub function: ToolCallFunctionDefinition,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+pub struct ToolCallFunctionDefinition {
+    /// A description of what the function does, used by the model to choose when and how to call the function.
+    pub description: Option<String>,
+    /// The name of the function to be called. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64.
+    pub name: String,
+    /// The parameters the functions accepts, described as a JSON Schema object.
+    /// See the [guide](https://platform.openai.com/docs/guides/function-calling) for examples,
+    /// and the [JSON Schema reference](https://json-schema.org/understanding-json-schema/reference) for documentation about the format.
+    /// Omitting `parameters` defines a function with an empty parameter list.
+    pub parameters: Option<Value>,
+    /// Whether to enable strict schema adherence when generating the function call.
+    /// If set to true, the model will follow the exact schema defined in the `parameters` field.
+    /// Only a subset of JSON Schema is supported when `strict` is `true`.
+    /// Learn more about Structured Outputs in the [function calling guide](https://platform.openai.com/docs/api-reference/chat/docs/guides/function-calling).
+    pub strict: Option<bool>,
+}
+
+impl ToolCallFunctionDefinition {
+    pub fn new<T: JsonSchema>(strict: Option<bool>) -> Self {
+        let mut settings = schemars::r#gen::SchemaSettings::default();
+        settings.option_add_null_type = true;
+        settings.option_nullable = false;
+        settings.inline_subschemas = true;
+        let mut generator = schemars::SchemaGenerator::new(settings);
+        let mut schema = T::json_schema(&mut generator).into_object();
+        let description = schema.metadata().description.clone();
+        let schema = serde_json::to_value(schema).expect("unreachable");
+        ToolCallFunctionDefinition {
+            description,
+            name: T::schema_name(),
+            parameters: Some(schema),
+            strict,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolChoiceMode {
+    /// The model will not call any tool and instead generates a message.
+    None,
+    /// The model can pick between generating a message or calling one or more tools.
+    Auto,
+    /// The model must call one or more tools.
+    Required,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+pub struct FunctionChoice {
+    /// The name of the function to call.
+    name: String,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ToolChoiceFunction {
+    Function { function: FunctionChoice },
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+#[serde(untagged)]
+pub enum ToolChoice {
+    Mode(ToolChoiceMode),
+    /// The model will call the function with the given name.
+    Function(ToolChoiceFunction),
+}
+
+impl ToolChoice {
+    pub fn mode(mode: ToolChoiceMode) -> Self {
+        ToolChoice::Mode(mode)
+    }
+    pub fn function(name: String) -> Self {
+        ToolChoice::Function(ToolChoiceFunction::Function {
+            function: FunctionChoice { name },
+        })
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolCallType {
+    Function,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 pub struct ToolCall {
+    /// The ID of the tool call.
+    pub id: String,
+    /// The type of the tool. Currently, only `function` is supported.
+    pub r#type: ToolCallType,
+    /// The function that the model called.
+    pub function: ToolCallFunction,
+}
+
+impl Tokens for ToolCall {
+    fn tokens(&self) -> u64 {
+        self.function.tokens()
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+pub struct ToolCallDelta {
+    pub index: i64,
     /// The ID of the tool call.
     pub id: String,
     /// The type of the tool. Currently, only `function` is supported.
@@ -119,6 +398,12 @@ pub struct ToolCallFunction {
     /// hallucinate parameters not defined by your function schema.
     /// Validate the arguments in your code before calling your function.
     pub arguments: String,
+}
+
+impl Tokens for ToolCallFunction {
+    fn tokens(&self) -> u64 {
+        self.arguments.tokens()
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
@@ -144,6 +429,12 @@ pub struct ChatCompletionFunctionCall {
     pub arguments: String,
 }
 
+impl Tokens for ChatCompletionFunctionCall {
+    fn tokens(&self) -> u64 {
+        self.arguments.tokens()
+    }
+}
+
 /// Same as ChatCompletionFunctionCall, but received during a response stream.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct ChatCompletionFunctionCallDelta {
@@ -156,13 +447,54 @@ pub struct ChatCompletionFunctionCallDelta {
 
 #[derive(Deserialize, Serialize, Debug, Clone, Copy, Eq, PartialEq)]
 #[serde(rename_all = "lowercase")]
-pub enum ChatCompletionMessageRole {
-    System,
-    User,
-    Assistant,
-    Function,
-    Tool,
-    Developer,
+pub enum ChatCompletionReasoningEffort {
+    Low,
+    Medium,
+    High,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+pub struct AudioOptions {
+    /// The voice the model uses to respond. Supported voices are `ash`, `ballad`, `coral`, `sage`, and `verse`
+    /// (also supported but not recommended are `alloy`, `echo`, and `shimmer`; these voices are less expressive).
+    pub voice: String,
+    /// Specifies the output audio format. Must be one of `wav`, `mp3`, `flac`, `opus`, or `pcm16`.
+    pub format: String,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+pub struct PredictionContent {
+    /// The type of the content part.
+    pub r#type: String,
+    /// The text content.
+    pub text: String,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum PredictionType {
+    Content,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+pub struct Prediction {
+    /// The type of the predicted content you want to provide. This type is currently always `content`.
+    pub r#type: PredictionType,
+    /// The content that should be matched when generating a model response. If generated tokens would match this content, the entire model response can be returned much more quickly.
+    ///
+    /// String: Text content. The content used for a Predicted Output. This is often the text of a file you are regenerating with minor changes.
+    ///
+    /// Array: Array of content parts. An array of content parts with a defined type. Supported options differ based on the model being used to generate the response. Can contain text inputs.
+    pub content: StringOrArray<PredictionContent>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq)]
+pub struct StreamOptions {
+    /// If set, an additional chunk will be streamed before the `data: [DONE]` message.
+    /// The `usage` field on this chunk shows the token usage statistics for the entire request,
+    /// and the `choices` field will always be an empty array.
+    /// All other chunks will also include a `usage` field, but with a null value.
+    pub include_usage: bool,
 }
 
 #[derive(Serialize, Builder, Debug, Clone)]
@@ -175,7 +507,13 @@ pub struct ChatCompletionRequest {
     /// are supported.
     model: String,
     /// The messages to generate chat completions for, in the [chat format](https://platform.openai.com/docs/guides/chat/introduction).
-    messages: Vec<ChatCompletionMessage>,
+    messages: Vec<ChatMessage>,
+    /// Constrains effort on reasoning for (reasoning models)[https://platform.openai.com/docs/guides/reasoning].
+    /// Currently supported values are low, medium, and high (Defaults to medium).
+    /// Reducing reasoning effort can result in faster responses and fewer tokens used on reasoning in a response.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reasoning_effort: Option<ChatCompletionReasoningEffort>,
     /// What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
     ///
     /// We generally recommend altering this or `top_p` but not both.
@@ -192,9 +530,36 @@ pub struct ChatCompletionRequest {
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     n: Option<u8>,
+    ///Output types that you would like the model to generate for this request. Most models are capable of generating text, which is the default:
+    ///
+    /// `["text"]`
+    ///
+    /// The `gpt-4o-audio-preview` model can also be used to [generate audio](https://platform.openai.com/docs/guides/audio).
+    /// To request that this model generate both text and audio responses, you can use:
+    ///
+    /// `["text", "audio"]`
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    modalities: Option<Vec<String>>,
+    /// Parameters for audio output. Required when audio output is requested with modalities: ["audio"]. Learn more.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    audio: Option<AudioOptions>,
+    /// Configuration for a [Predicted Output](https://platform.openai.com/docs/guides/predicted-outputs), which can greatly improve response times when large parts of the model response are known ahead of time.
+    /// This is most common when you are regenerating a file with only minor changes to most of the content.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    prediction: Option<Prediction>,
+    /// If set, partial message deltas will be sent, like in ChatGPT.
+    /// Tokens will be sent as data-only [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Event_stream_format) as they become available,
+    /// with the stream terminated by a `data: [DONE]` message. [Example Python code](https://cookbook.openai.com/examples/how_to_stream_completions).
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     stream: Option<bool>,
+    /// Options for streaming response. Only set this when you set `stream: true`.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream_options: Option<StreamOptions>,
     /// Up to 4 sequences where the API will stop generating further tokens.
     #[builder(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -204,6 +569,7 @@ pub struct ChatCompletionRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     seed: Option<u64>,
     /// The maximum number of tokens allowed for the generated answer. By default, the number of tokens the model can return will be (4096 - prompt tokens).
+    #[deprecated(note = "Use max_completion_tokens instead")]
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<u64>,
@@ -234,12 +600,32 @@ pub struct ChatCompletionRequest {
     #[builder(default)]
     #[serde(skip_serializing_if = "String::is_empty")]
     user: String,
+    /// A list of tools the model may call. Currently, only functions are supported as a tool. Use this to provide a list of functions the model may generate JSON inputs for. A max of 128 functions are supported.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    tools: Vec<ChatCompletionTool>,
+    /// Controls which (if any) tool is called by the model.
+    /// `none` means the model will not call any tool and instead generates a message.
+    /// `auto` means the model can pick between generating a message or calling one or more tools.
+    /// `required` means the model must call one or more tools.
+    /// Specifying a particular tool via `{"type": "function", "function": {"name": "my_function"}}` forces the model to call that tool.
+    ///
+    /// `none` is the default when no tools are present. `auto` is the default if tools are present.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_choice: Option<ToolChoice>,
+    /// Whether to enable parallel function calling during tool use.
+    /// Defaults to true.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    parallel_tool_calls: Option<bool>,
     /// Describe functions that ChatGPT can call
     /// The latest models of ChatGPT support function calling, which allows you to define functions that can be called from the prompt.
     /// For example, you can define a function called "get_weather" that returns the weather in a given city
     ///
     /// [Function calling API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-functions)
     /// [See more information about function calling in ChatGPT.](https://platform.openai.com/docs/guides/gpt/function-calling)
+    #[deprecated(note = "Use tools instead")]
     #[builder(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     functions: Vec<ChatCompletionFunctionDefinition>,
@@ -252,6 +638,7 @@ pub struct ChatCompletionRequest {
     /// - Specifying a particular function via {"name":\ "my_function"} forces the model to call that function.
     ///
     /// "none" is the default when no functions are present. "auto" is the default if functions are present.
+    #[deprecated(note = "Use tool_choice instead")]
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     function_call: Option<Value>,
@@ -272,37 +659,79 @@ pub struct ChatCompletionRequest {
     venice_parameters: Option<VeniceParameters>,
 }
 
+impl Tokens for ChatCompletionRequest {
+    fn tokens(&self) -> u64 {
+        self.messages.iter().map(|m| m.tokens()).sum()
+    }
+}
+
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct VeniceParameters {
     pub include_venice_system_prompt: bool,
 }
 
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
-pub struct ChatCompletionResponseFormat {
-    /// Must be one of text or json_object (defaults to text)
-    #[serde(rename = "type")]
-    typ: String,
+pub struct ChatCompletionResponseFormatJsonSchema {
+    /// The name of the response format. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64.
+    pub name: String,
+    /// A description of what the response format is for, used by the model to determine how to respond in the format.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// The schema for the response format, described as a JSON Schema object.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schema: Option<Value>,
+    /// Whether to enable strict schema adherence when generating the output.
+    /// If set to true, the model will always follow the exact schema defined in the schema field.
+    /// Only a subset of JSON Schema is supported when strict is true.
+    /// To learn more, read the [Structured Outputs guide](https://platform.openai.com/docs/guides/structured-outputs).
+    ///
+    /// defaults to false
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strict: Option<bool>,
+}
+
+impl ChatCompletionResponseFormatJsonSchema {
+    pub fn new<T: JsonSchema>(strict: Option<bool>) -> Self {
+        let mut settings = schemars::r#gen::SchemaSettings::default();
+        settings.option_add_null_type = true;
+        settings.option_nullable = false;
+        settings.inline_subschemas = true;
+        let mut generator = schemars::SchemaGenerator::new(settings);
+        let mut schema = T::json_schema(&mut generator).into_object();
+        let description = schema.metadata().description.clone();
+        let schema = serde_json::to_value(schema).expect("unreachable");
+        ChatCompletionResponseFormatJsonSchema {
+            name: T::schema_name(),
+            description,
+            schema: Some(schema),
+            strict,
+        }
+    }
+}
+
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ChatCompletionResponseFormat {
+    Text,
+    JsonObject,
+    JsonSchema {
+        json_schema: ChatCompletionResponseFormatJsonSchema,
+    },
 }
 
 impl ChatCompletionResponseFormat {
-    pub fn json_object() -> Self {
-        ChatCompletionResponseFormat {
-            typ: "json_object".to_string(),
-        }
-    }
-
     pub fn text() -> Self {
-        ChatCompletionResponseFormat {
-            typ: "text".to_string(),
-        }
+        ChatCompletionResponseFormat::Text
+    }
+    pub fn json_object() -> Self {
+        ChatCompletionResponseFormat::JsonObject
+    }
+    pub fn json_schema(json_schema: ChatCompletionResponseFormatJsonSchema) -> Self {
+        ChatCompletionResponseFormat::JsonSchema { json_schema }
     }
 }
-
 impl<C> ChatCompletionGeneric<C> {
-    pub fn builder(
-        model: &str,
-        messages: impl Into<Vec<ChatCompletionMessage>>,
-    ) -> ChatCompletionBuilder {
+    pub fn builder(model: &str, messages: impl Into<Vec<ChatMessage>>) -> ChatCompletionBuilder {
         ChatCompletionBuilder::create_empty()
             .model(model)
             .messages(messages)
@@ -360,18 +789,6 @@ impl ChatCompletionChoiceDelta {
     ) -> Result<(), ChatCompletionDeltaMergeError> {
         if self.index != other.index {
             return Err(ChatCompletionDeltaMergeError::DifferentCompletionChoiceIndices);
-        }
-        if self.delta.role.is_none() {
-            if let Some(other_role) = other.delta.role {
-                // Set role to other_role.
-                self.delta.role = Some(other_role);
-            }
-        }
-        if self.delta.name.is_none() {
-            if let Some(other_name) = &other.delta.name {
-                // Set name to other_name.
-                self.delta.name = Some(other_name.clone());
-            }
         }
         // Merge contents.
         match self.delta.content.as_mut() {
@@ -445,15 +862,11 @@ impl From<ChatCompletionDelta> for ChatCompletion {
                     index: choice.index,
                     finish_reason: clone_default_unwrapped_option_string(&choice.finish_reason),
                     message: ChatCompletionMessage {
-                        role: choice
-                            .delta
-                            .role
-                            .unwrap_or_else(|| ChatCompletionMessageRole::System),
                         content: choice.delta.content.clone(),
-                        name: choice.delta.name.clone(),
                         function_call: choice.delta.function_call.clone().map(|f| f.into()),
-                        tool_call_id: None,
+                        refusal: choice.delta.refusal.clone(),
                         tool_calls: Some(Vec::new()),
+                        audio: None,
                     },
                 })
                 .collect(),
@@ -532,12 +945,6 @@ fn clone_default_unwrapped_option_string(string: &Option<String>) -> String {
     }
 }
 
-impl Default for ChatCompletionMessageRole {
-    fn default() -> Self {
-        Self::User
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -550,17 +957,13 @@ mod tests {
 
         let chat_completion = ChatCompletion::builder(
             "gpt-3.5-turbo",
-            [ChatCompletionMessage {
-                role: ChatCompletionMessageRole::User,
-                content: Some("Hello!".to_string()),
+            [ChatMessage::User {
+                content: "Hello!".to_string().into(),
                 name: None,
-                function_call: None,
-                tool_call_id: None,
-                tool_calls: Some(Vec::new()),
             }],
         )
         .temperature(0.0)
-        .response_format(ChatCompletionResponseFormat::text())
+        .response_format(ChatCompletionResponseFormat::Text)
         .credentials(credentials)
         .create()
         .await
@@ -588,16 +991,11 @@ mod tests {
 
         let chat_completion = ChatCompletion::builder(
             "gpt-3.5-turbo",
-            [ChatCompletionMessage {
-                role: ChatCompletionMessageRole::User,
-                content: Some(
-                    "What type of seed does Mr. England sow in the song? Reply with 1 word."
-                        .to_string(),
-                ),
+            [ChatMessage::User {
+                content: "What type of seed does Mr. England sow in the song? Reply with 1 word."
+                    .to_string()
+                    .into(),
                 name: None,
-                function_call: None,
-                tool_call_id: None,
-                tool_calls: Some(Vec::new()),
             }],
         )
         // Determinism currently comes from temperature 0, not seed.
@@ -628,13 +1026,9 @@ mod tests {
 
         let chat_stream = ChatCompletion::builder(
             "gpt-3.5-turbo",
-            [ChatCompletionMessage {
-                role: ChatCompletionMessageRole::User,
-                content: Some("Hello!".to_string()),
+            [ChatMessage::User {
+                content: "Hello!".to_string().into(),
                 name: None,
-                function_call: None,
-                tool_call_id: None,
-                tool_calls: Some(Vec::new()),
             }],
         )
         .temperature(0.0)
@@ -666,13 +1060,9 @@ mod tests {
         let chat_stream = ChatCompletion::builder(
             "gpt-4o",
             [
-                ChatCompletionMessage {
-                    role: ChatCompletionMessageRole::User,
-                    content: Some("What is the weather in Boston?".to_string()),
+                ChatMessage::User {
+                    content: "What is the weather in Boston?".to_string().into(),
                     name: None,
-                    function_call: None,
-                    tool_call_id: None,
-                    tool_calls: Some(Vec::new()),
                 }
             ]
         ).functions([ChatCompletionFunctionDefinition {
@@ -735,18 +1125,16 @@ mod tests {
         let credentials = Credentials::from_env();
         let chat_completion = ChatCompletion::builder(
             "gpt-3.5-turbo",
-            [ChatCompletionMessage {
-                role: ChatCompletionMessageRole::User,
-                content: Some("Write an example JSON for a JWT header using RS256".to_string()),
+            [ChatMessage::User {
+                content: "Write an example JSON for a JWT header using RS256"
+                    .to_string()
+                    .into(),
                 name: None,
-                function_call: None,
-                tool_call_id: None,
-                tool_calls: Some(Vec::new()),
             }],
         )
         .temperature(0.0)
         .seed(1337u64)
-        .response_format(ChatCompletionResponseFormat::json_object())
+        .response_format(ChatCompletionResponseFormat::JsonObject)
         .credentials(credentials)
         .create()
         .await
@@ -812,43 +1200,33 @@ mod tests {
         let chat_completion = ChatCompletion::builder(
             "gpt-4o-mini",
             [
-                ChatCompletionMessage {
-                    role: ChatCompletionMessageRole::User,
-                    content: Some(
-                        "What's 0.9102847*28456? \
+                ChatMessage::User {
+                    content: "What's 0.9102847*28456? \
                         reply in plain text, \
                         round the number to to 2 decimals \
                         and reply with the result number only, \
                         with no full stop at the end"
-                            .to_string(),
-                    ),
+                        .to_string()
+                        .into(),
                     name: None,
-                    function_call: None,
-                    tool_call_id: None,
-                    tool_calls: Some(Vec::new()),
                 },
-                ChatCompletionMessage {
-                    role: ChatCompletionMessageRole::Assistant,
-                    content: Some("Let me calculate that for you.".to_string()),
-                    name: None,
+                ChatMessage::Assistant(ChatCompletionMessage {
+                    content: Some("Let me calculate that for you.".to_string().into()),
+                    refusal: None,
                     function_call: None,
-                    tool_call_id: None,
                     tool_calls: Some(vec![ToolCall {
                         id: "the_tool_call".to_string(),
-                        r#type: "function".to_string(),
+                        r#type: ToolCallType::Function,
                         function: ToolCallFunction {
                             name: "mul".to_string(),
                             arguments: "not_required_to_be_valid_here".to_string(),
                         },
                     }]),
-                },
-                ChatCompletionMessage {
-                    role: ChatCompletionMessageRole::Tool,
-                    content: Some("the result is 25903.061423199997".to_string()),
-                    name: None,
-                    function_call: None,
-                    tool_call_id: Some("the_tool_call".to_owned()),
-                    tool_calls: Some(Vec::new()),
+                    audio: None,
+                }),
+                ChatMessage::Tool {
+                    content: "the result is 25903.061423199997".to_string().into(),
+                    tool_call_id: "the_tool_call".to_string(),
                 },
             ],
         )
