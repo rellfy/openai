@@ -130,8 +130,41 @@ pub struct ToolCallFunctionDefinition {
     pub strict: Option<bool>,
 }
 
+/// To use Structured Outputs, all fields or function parameters must be specified as `required`.
+pub fn add_required(schema: &mut Value) {
+    match schema {
+        Value::Array(arr) => {
+            arr.iter_mut().for_each(|v| add_required(v));
+        }
+        Value::Object(obj) => {
+            if let Some(properties) = obj.get("properties") {
+                match properties {
+                    Value::Object(p) => {
+                        let required = p
+                            .iter()
+                            .map(|(r, _)| Value::String(r.clone()))
+                            .collect::<Vec<Value>>();
+                        obj.insert("required".to_string(), Value::Array(required));
+                        if obj.get("additionalProperties").is_none() {
+                            obj.insert(
+                                "additionalProperties".to_string(),
+                                Value::Bool(false),
+                            );
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            for (_, v) in obj.iter_mut() {
+                add_required(v);
+            }
+        }
+        _ => {}
+    }
+}
+
 impl ToolCallFunctionDefinition {
-    pub fn new<T: JsonSchema>(strict: Option<bool>) -> Self {
+    pub fn new<T: JsonSchema>(strict: bool) -> Self {
         let mut settings = schemars::r#gen::SchemaSettings::default();
         settings.option_add_null_type = true;
         settings.option_nullable = false;
@@ -139,12 +172,13 @@ impl ToolCallFunctionDefinition {
         let mut generator = schemars::SchemaGenerator::new(settings);
         let mut schema = T::json_schema(&mut generator).into_object();
         let description = schema.metadata().description.clone();
-        let schema = serde_json::to_value(schema).expect("unreachable");
+        let mut schema = serde_json::to_value(schema).expect("unreachable");
+        add_required(&mut schema);
         ToolCallFunctionDefinition {
             description,
             name: T::schema_name(),
             parameters: Some(schema),
-            strict,
+            strict: Some(strict),
         }
     }
 }
@@ -416,7 +450,7 @@ pub struct ChatCompletionResponseFormatJsonSchema {
 }
 
 impl ChatCompletionResponseFormatJsonSchema {
-    pub fn new<T: JsonSchema>(strict: Option<bool>) -> Self {
+    pub fn new<T: JsonSchema>(strict: bool) -> Self {
         let mut settings = schemars::r#gen::SchemaSettings::default();
         settings.option_add_null_type = true;
         settings.option_nullable = false;
@@ -424,12 +458,13 @@ impl ChatCompletionResponseFormatJsonSchema {
         let mut generator = schemars::SchemaGenerator::new(settings);
         let mut schema = T::json_schema(&mut generator).into_object();
         let description = schema.metadata().description.clone();
-        let schema = serde_json::to_value(schema).expect("unreachable");
+        let mut schema = serde_json::to_value(schema).expect("unreachable");
+        add_required(&mut schema);
         ChatCompletionResponseFormatJsonSchema {
             name: T::schema_name(),
             description,
             schema: Some(schema),
-            strict,
+            strict: Some(strict),
         }
     }
 }
