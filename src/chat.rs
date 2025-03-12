@@ -1,4 +1,5 @@
 //! Given a chat conversation, the model will return a chat completion response.
+pub mod structured_output;
 
 use super::{openai_post, ApiResponseOrError, Credentials, Usage};
 use crate::openai_request_stream;
@@ -10,6 +11,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use structured_output::{
+    ChatCompletionResponseFormatJsonSchema, JsonSchemaStyle, ToolCallFunctionDefinition,
+};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 /// A full chat completion.
@@ -105,97 +109,25 @@ pub struct ChatCompletionMessageDelta {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
-pub struct ChatCompletionTool {
-    /// The type of the tool. Currently, only `function` is supported.
-    pub r#type: String,
-    /// The name of the tool.
-    pub function: ToolCallFunctionDefinition,
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
-pub struct ToolCallFunctionDefinition {
-    /// A description of what the function does, used by the model to choose when and how to call the function.
-    pub description: Option<String>,
-    /// The name of the function to be called. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64.
-    pub name: String,
-    /// The parameters the functions accepts, described as a JSON Schema object.
-    /// See the [guide](https://platform.openai.com/docs/guides/function-calling) for examples,
-    /// and the [JSON Schema reference](https://json-schema.org/understanding-json-schema/reference) for documentation about the format.
-    /// Omitting `parameters` defines a function with an empty parameter list.
-    pub parameters: Option<Value>,
-    /// Whether to enable strict schema adherence when generating the function call.
-    /// If set to true, the model will follow the exact schema defined in the `parameters` field.
-    /// Only a subset of JSON Schema is supported when `strict` is `true`.
-    /// Learn more about Structured Outputs in the [function calling guide](https://platform.openai.com/docs/api-reference/chat/docs/guides/function-calling).
-    pub strict: Option<bool>,
-}
-
-/// To use Structured Outputs, all fields or function parameters must be specified as `required`.
-pub fn add_required(schema: &mut Value) {
-    match schema {
-        Value::Array(arr) => {
-            arr.iter_mut().for_each(|v| add_required(v));
-        }
-        Value::Object(obj) => {
-            if let Some(properties) = obj.get("properties") {
-                match properties {
-                    Value::Object(p) => {
-                        let required = p
-                            .iter()
-                            .map(|(r, _)| Value::String(r.clone()))
-                            .collect::<Vec<Value>>();
-                        obj.insert("required".to_string(), Value::Array(required));
-                        if obj.get("additionalProperties").is_none() {
-                            obj.insert(
-                                "additionalProperties".to_string(),
-                                Value::Bool(false),
-                            );
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            for (_, v) in obj.iter_mut() {
-                add_required(v);
-            }
-        }
-        _ => {}
-    }
-}
-
-impl ToolCallFunctionDefinition {
-    pub fn new<T: JsonSchema>(strict: bool) -> Self {
-        let mut settings = schemars::r#gen::SchemaSettings::default();
-        settings.option_add_null_type = true;
-        settings.option_nullable = false;
-        settings.inline_subschemas = true;
-        let mut generator = schemars::SchemaGenerator::new(settings);
-        let mut schema = T::json_schema(&mut generator).into_object();
-        let description = schema.metadata().description.clone();
-        let mut schema = serde_json::to_value(schema).expect("unreachable");
-        add_required(&mut schema);
-        ToolCallFunctionDefinition {
-            description,
-            name: T::schema_name(),
-            parameters: Some(schema),
-            strict: Some(strict),
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
-pub enum ToolChoice {
-    /// `none` means the model will not call any tool and instead generates a message.
-    /// `auto` means the model can pick between generating a message or calling one or more tools.
-    /// `required` means the model must call one or more tools.
-    Mode(String),
-    /// The model will call the function with the given name.
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ChatCompletionTool {
     Function {
-        /// The type of the tool. Currently, only `function` is supported.
-        r#type: String,
-        /// The function that the model called.
-        function: FunctionChoice,
+        function: ToolCallFunctionDefinition,
     },
+}
+
+impl ChatCompletionTool {
+    pub fn new<T: JsonSchema>(strict: bool, json_style: JsonSchemaStyle) -> Self {
+        let function = ToolCallFunctionDefinition::new::<T>(strict, json_style);
+        ChatCompletionTool::Function { function }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+pub enum ToolChoiceMode {
+    None,
+    Auto,
+    Required,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
@@ -204,12 +136,51 @@ pub struct FunctionChoice {
     name: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FunctionLiteral;
+impl Serialize for FunctionLiteral {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str("function")
+    }
+}
+impl<'de> Deserialize<'de> for FunctionLiteral {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s: &str = serde::Deserialize::deserialize(deserializer)?;
+        if s != "function" {
+            return Err(serde::de::Error::custom("expected function"));
+        }
+        Ok(FunctionLiteral)
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
+#[serde(untagged)]
+pub enum ToolChoice {
+    /// `none` means the model will not call any tool and instead generates a message.
+    /// `auto` means the model can pick between generating a message or calling one or more tools.
+    /// `required` means the model must call one or more tools.
+    Mode(ToolChoiceMode),
+    /// The model will call the function with the given name.
+    Function {
+        /// The type of the tool. Currently, only `function` is supported.
+        r#type: FunctionLiteral,
+        /// The function that the model called.
+        function: FunctionChoice,
+    },
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 pub struct ToolCall {
     /// The ID of the tool call.
     pub id: String,
     /// The type of the tool. Currently, only `function` is supported.
-    pub r#type: String,
+    pub r#type: FunctionLiteral,
     /// The function that the model called.
     pub function: ToolCallFunction,
 }
@@ -220,7 +191,7 @@ pub struct ToolCallDelta {
     /// The ID of the tool call.
     pub id: String,
     /// The type of the tool. Currently, only `function` is supported.
-    pub r#type: String,
+    pub r#type: FunctionLiteral,
     /// The function that the model called.
     pub function: ToolCallFunction,
 }
@@ -430,46 +401,6 @@ pub struct VeniceParameters {
 }
 
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
-pub struct ChatCompletionResponseFormatJsonSchema {
-    /// The name of the response format. Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64.
-    pub name: String,
-    /// A description of what the response format is for, used by the model to determine how to respond in the format.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-    /// The schema for the response format, described as a JSON Schema object.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub schema: Option<Value>,
-    /// Whether to enable strict schema adherence when generating the output.
-    /// If set to true, the model will always follow the exact schema defined in the schema field.
-    /// Only a subset of JSON Schema is supported when strict is true.
-    /// To learn more, read the [Structured Outputs guide](https://platform.openai.com/docs/guides/structured-outputs).
-    ///
-    /// defaults to false
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub strict: Option<bool>,
-}
-
-impl ChatCompletionResponseFormatJsonSchema {
-    pub fn new<T: JsonSchema>(strict: bool) -> Self {
-        let mut settings = schemars::r#gen::SchemaSettings::default();
-        settings.option_add_null_type = true;
-        settings.option_nullable = false;
-        settings.inline_subschemas = true;
-        let mut generator = schemars::SchemaGenerator::new(settings);
-        let mut schema = T::json_schema(&mut generator).into_object();
-        let description = schema.metadata().description.clone();
-        let mut schema = serde_json::to_value(schema).expect("unreachable");
-        add_required(&mut schema);
-        ChatCompletionResponseFormatJsonSchema {
-            name: T::schema_name(),
-            description,
-            schema: Some(schema),
-            strict: Some(strict),
-        }
-    }
-}
-
-#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ChatCompletionResponseFormat {
     Text,
@@ -486,10 +417,12 @@ impl ChatCompletionResponseFormat {
     pub fn json_object() -> Self {
         ChatCompletionResponseFormat::JsonObject
     }
-    pub fn json_schema(json_schema: ChatCompletionResponseFormatJsonSchema) -> Self {
+    pub fn json_schema<T: JsonSchema>(strict: bool, json_style: JsonSchemaStyle) -> Self {
+        let json_schema = ChatCompletionResponseFormatJsonSchema::new::<T>(strict, json_style);
         ChatCompletionResponseFormat::JsonSchema { json_schema }
     }
 }
+
 impl<C> ChatCompletionGeneric<C> {
     pub fn builder(
         model: &str,
@@ -996,6 +929,90 @@ mod tests {
         merged.unwrap().into()
     }
 
+    #[derive(JsonSchema, Deserialize, Debug, Eq, PartialEq)]
+    enum Race {
+        Black,
+        White,
+        Asian,
+        Other(String),
+    }
+    #[derive(JsonSchema, Deserialize, Debug, PartialEq)]
+    enum Species {
+        Human(Race),
+        Orc { color: String, leader: String },
+    }
+    #[derive(JsonSchema, Deserialize, Debug, PartialEq)]
+    struct Character {
+        pub name: String,
+        pub age: i64,
+        pub power: f64,
+        pub skills: Vec<Skill>,
+        pub species: Species,
+    }
+    #[derive(JsonSchema, Deserialize, Debug, PartialEq)]
+    struct Skill {
+        pub name: String,
+        pub description: Option<String>,
+        pub dont_use_this_property: Option<String>,
+    }
+
+    #[tokio::test]
+    async fn chat_structured_output_completion() {
+        dotenv().ok();
+        let credentials = Credentials::from_env();
+
+        let format =
+            ChatCompletionResponseFormat::json_schema::<Character>(true, JsonSchemaStyle::OpenAI);
+        let chat_completion = ChatCompletion::builder(
+            "gpt-4o-mini",
+            [ChatCompletionMessage {
+                role: ChatCompletionMessageRole::User,
+                content: Some(
+                    "Create a DND character, don't use the dont_use_this_property field"
+                        .to_string(),
+                ),
+                ..Default::default()
+            }],
+        )
+        .credentials(credentials)
+        .response_format(format)
+        .create()
+        .await
+        .unwrap();
+        let character_str = chat_completion.choices[0].message.content.as_ref().unwrap();
+        let _character: Character = serde_json::from_str(character_str).unwrap();
+    }
+
+    #[tokio::test]
+    async fn chat_tool_use_completion() {
+        dotenv().ok();
+        let credentials = Credentials::from_env();
+        let schema = ChatCompletionTool::new::<Character>(true, JsonSchemaStyle::OpenAI);
+        let chat_completion = ChatCompletion::builder(
+            "gpt-4o-mini",
+            [ChatCompletionMessage {
+                role: ChatCompletionMessageRole::User,
+                content: Some("create a random DND character directly with tools".to_string()),
+                ..Default::default()
+            }],
+        )
+        .credentials(credentials)
+        .tools(vec![schema])
+        .tool_choice(ToolChoice::Function {
+            r#type: FunctionLiteral,
+            function: FunctionChoice {
+                name: "Character".to_string(),
+            },
+        })
+        .create()
+        .await
+        .unwrap();
+        let msg = chat_completion.choices[0].message.clone();
+        let tool_calls = msg.tool_calls.as_ref();
+        let tool_call: &ToolCall = tool_calls.unwrap().first().unwrap();
+        let _character: Character = serde_json::from_str(&tool_call.function.arguments).unwrap();
+    }
+
     #[tokio::test]
     async fn chat_tool_response_completion() {
         dotenv().ok();
@@ -1027,7 +1044,7 @@ mod tests {
                     tool_call_id: None,
                     tool_calls: Some(vec![ToolCall {
                         id: "the_tool_call".to_string(),
-                        r#type: "function".to_string(),
+                        r#type: FunctionLiteral,
                         function: ToolCallFunction {
                             name: "mul".to_string(),
                             arguments: "not_required_to_be_valid_here".to_string(),
