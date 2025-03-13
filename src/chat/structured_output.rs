@@ -1,6 +1,10 @@
 use std::mem::take;
 
-use schemars::JsonSchema;
+use schemars::{
+    schema::{Schema, SchemaObject},
+    visit::{visit_schema_object, Visitor},
+    JsonSchema,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -84,77 +88,6 @@ impl ToolCallFunctionDefinition {
     }
 }
 
-fn structured_output_post_process(schema: &mut Value, style: JsonSchemaStyle) {
-    let obj = match schema {
-        Value::Object(obj) => obj,
-        _ => return,
-    };
-    // OpenAI uses `anyOf` instead of `oneOf`
-    if let Some(v) = obj.remove("oneOf") {
-        obj.insert("anyOf".to_string(), v);
-    }
-    if let Some(Value::Array(objs)) = obj.get_mut("anyOf") {
-        for v in objs.iter_mut() {
-            structured_output_post_process(v, style);
-        }
-    }
-    let ty = match obj.get("type") {
-        Some(Value::String(s)) => s,
-        _ => {
-            return;
-        }
-    };
-    match ty.as_str() {
-        "array" => {
-            if let Some(v) = obj.get_mut("items") {
-                structured_output_post_process(v, style);
-            }
-        }
-        "object" => {
-            let properties = if let Some(Value::Object(p)) = obj.get_mut("properties") {
-                p
-            } else {
-                return;
-            };
-            let mut required = Vec::new();
-            for (k, v) in properties.iter_mut() {
-                // v must be a json schema object
-                structured_output_post_process(v, style);
-                required.push(Value::String(k.clone()));
-            }
-            if style == JsonSchemaStyle::OpenAI {
-                // OpenAI: All fields or function parameters must be specified as `required`;
-                obj.insert("required".to_string(), Value::Array(required));
-                // OpenAI: Need to add `additionalProperties`;
-                if obj.get("additionalProperties").is_none() {
-                    obj.insert("additionalProperties".to_string(), Value::Bool(false));
-                }
-            }
-        }
-        "string" => {
-            *obj = take(obj)
-                .into_iter()
-                .filter(|(k, _)| ["type", "enum"].contains(&k.as_str()))
-                .collect();
-        }
-        "number" => {
-            // Remove constraints like `multipleOf` for floating point types;
-            *obj = take(obj)
-                .into_iter()
-                .filter(|(k, _)| ["type"].contains(&k.as_str()))
-                .collect();
-        }
-        "integer" => {
-            // Remove constraints like `format` and `minimum` for integer types;
-            *obj = take(obj)
-                .into_iter()
-                .filter(|(k, _)| ["type"].contains(&k.as_str()))
-                .collect();
-        }
-        _ => {}
-    }
-}
-
 /// Generate a JSON Schema with the given style.
 ///
 /// IMPORTANT: Both OpenAI and Grok do not support the `format` and `minimum` JSON Schema attributes.
@@ -171,7 +104,42 @@ pub fn generate_json_schema<T: JsonSchema>(json_style: JsonSchemaStyle) -> (Valu
     let mut generator = schemars::SchemaGenerator::new(settings);
     let mut schema = T::json_schema(&mut generator).into_object();
     let description = schema.metadata().description.clone();
-    let mut schema = serde_json::to_value(schema).expect("unreachable");
-    structured_output_post_process(&mut schema, json_style);
+    let mut processor = SchemaPostProcessor { style: json_style };
+    processor.visit_schema_object(&mut schema);
+    let schema = serde_json::to_value(schema).expect("unreachable");
     (schema, description)
+}
+
+pub struct SchemaPostProcessor {
+    pub style: JsonSchemaStyle,
+}
+
+impl Visitor for SchemaPostProcessor {
+    fn visit_schema_object(&mut self, schema: &mut SchemaObject) {
+        if let Some(sub) = &mut schema.subschemas {
+            sub.any_of = take(&mut sub.one_of);
+        }
+        schema.format = None;
+        if let Some(sub) = &mut schema.object {
+            if self.style == JsonSchemaStyle::OpenAI {
+                if sub.additional_properties.is_none() {
+                    sub.additional_properties = Some(Box::new(Schema::Bool(false)));
+                }
+                sub.required = sub.properties.keys().map(|s| s.clone()).collect();
+            }
+        }
+        if let Some(num) = &mut schema.number {
+            num.multiple_of = None;
+            num.exclusive_maximum = None;
+            num.exclusive_minimum = None;
+            num.maximum = None;
+            num.minimum = None;
+        }
+        if let Some(str) = &mut schema.string {
+            str.max_length = None;
+            str.min_length = None;
+            str.pattern = None;
+        }
+        visit_schema_object(self, schema);
+    }
 }
