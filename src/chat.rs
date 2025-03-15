@@ -187,11 +187,11 @@ impl Tokens for ChatMessage {
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, PartialEq, Default)]
 pub struct Audio {
     pub id: String,
-    #[serde(skip_serializing)]
+    #[serde(skip_serializing, default)]
     pub expires_at: i64,
-    #[serde(skip_serializing)]
+    #[serde(skip_serializing, default)]
     pub data: String,
-    #[serde(skip_serializing)]
+    #[serde(skip_serializing, default)]
     pub transcript: String,
 }
 
