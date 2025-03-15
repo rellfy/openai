@@ -117,8 +117,8 @@ pub enum ChatCompletionTool {
 }
 
 impl ChatCompletionTool {
-    pub fn new<T: JsonSchema>(strict: bool, json_style: JsonSchemaStyle) -> Self {
-        let function = ToolCallFunctionDefinition::new::<T>(strict, json_style);
+    pub fn new<T: JsonSchema>(strict: Option<bool>) -> Self {
+        let function = ToolCallFunctionDefinition::new::<T>(strict);
         ChatCompletionTool::Function { function }
     }
 }
@@ -133,7 +133,7 @@ pub enum ToolChoiceMode {
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 pub struct FunctionChoice {
     /// The name of the function to call.
-    name: String,
+    pub name: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -173,6 +173,18 @@ pub enum ToolChoice {
         /// The function that the model called.
         function: FunctionChoice,
     },
+}
+
+impl ToolChoice {
+    pub fn mode(mode: ToolChoiceMode) -> Self {
+        ToolChoice::Mode(mode)
+    }
+    pub fn function(name: String) -> Self {
+        ToolChoice::Function {
+            r#type: FunctionLiteral,
+            function: FunctionChoice { name },
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
@@ -987,7 +999,7 @@ mod tests {
     async fn chat_tool_use_completion() {
         dotenv().ok();
         let credentials = Credentials::from_env();
-        let schema = ChatCompletionTool::new::<Character>(true, JsonSchemaStyle::OpenAI);
+        let schema = ChatCompletionTool::new::<Character>(None);
         let chat_completion = ChatCompletion::builder(
             "gpt-4o-mini",
             [ChatCompletionMessage {

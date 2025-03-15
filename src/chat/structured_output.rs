@@ -2,11 +2,12 @@ use std::mem::take;
 
 use schemars::{
     schema::{Schema, SchemaObject},
+    schema_for,
     visit::{visit_schema_object, Visitor},
     JsonSchema,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum JsonSchemaStyle {
@@ -72,17 +73,18 @@ pub struct ToolCallFunctionDefinition {
 impl ToolCallFunctionDefinition {
     /// Create a new ToolCallFunctionDefinition with the given strictness and JSON Schema style.
     ///
-    /// Note: Grok does not support strict schema adherence.
-    pub fn new<T: JsonSchema>(strict: bool, json_style: JsonSchemaStyle) -> Self {
-        let (schema, description) = generate_json_schema::<T>(json_style);
-        let strict = match json_style {
-            JsonSchemaStyle::OpenAI => Some(strict),
-            JsonSchemaStyle::Grok => None,
+    /// Note: Grok tools does not support strict schema adherence, need to set `strict` to None.
+    pub fn new<T: JsonSchema>(strict: Option<bool>) -> Self {
+        let schema = schema_for!(T);
+        let description = if let Some(metadata) = &schema.schema.metadata {
+            metadata.description.clone()
+        } else {
+            None
         };
         ToolCallFunctionDefinition {
             description,
             name: T::schema_name(),
-            parameters: Some(schema),
+            parameters: Some(json!(schema)),
             strict,
         }
     }
