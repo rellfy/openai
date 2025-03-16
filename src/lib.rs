@@ -76,6 +76,31 @@ pub struct OpenAiError {
     pub code: Option<String>,
 }
 
+/// Pagination options for API requests fetching lists of items.
+#[derive(Serialize, Debug, Clone, Eq, PartialEq, Default)]
+pub struct RequestPagination {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u32>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub after: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub order: Option<RequestOrder>
+}
+
+/// Order of items in a list.
+#[derive(Serialize, Debug, Clone, Eq, PartialEq)]
+pub enum RequestOrder {
+    /// Ascending order.
+    #[serde(rename = "asc")]
+    Ascending,
+
+    /// Descending order.
+    #[serde(rename = "desc")]
+    Descending,
+}
+
 impl OpenAiError {
     fn new(message: String, error_type: String) -> OpenAiError {
         OpenAiError {
@@ -189,6 +214,14 @@ where
     T: DeserializeOwned,
 {
     openai_request_json(Method::GET, route, |request| request, credentials_opt).await
+}
+
+async fn openai_get_with_query<T, Query>(route: &str, query: &Query, credentials_opt: Option<Credentials>) -> ApiResponseOrError<T>
+where
+    T: DeserializeOwned,
+    Query: Serialize + ?Sized
+{
+    openai_request_json(Method::GET, route, |request| request.query(query), credentials_opt).await
 }
 
 async fn openai_delete<T>(

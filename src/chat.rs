@@ -1,6 +1,6 @@
 //! Given a chat conversation, the model will return a chat completion response.
 
-use super::{openai_post, ApiResponseOrError, Credentials, Usage};
+use super::{openai_post, openai_get, openai_get_with_query, ApiResponseOrError, Credentials, Usage, RequestPagination};
 use crate::openai_request_stream;
 use derive_builder::Builder;
 use futures_util::StreamExt;
@@ -270,6 +270,10 @@ pub struct ChatCompletionRequest {
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     venice_parameters: Option<VeniceParameters>,
+    /// Whether to store the completion for use in distillation or evals.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
+    pub store: Option<bool>,
 }
 
 #[derive(Serialize, Debug, Clone, Eq, PartialEq)]
@@ -309,10 +313,44 @@ impl<C> ChatCompletionGeneric<C> {
     }
 }
 
+#[derive(Serialize, Builder, Debug, Clone, Default)]
+#[builder(derive(Clone, Debug, PartialEq))]
+#[builder(pattern = "owned")]
+#[builder(name = "ChatCompletionMessagesRequestBuilder")]
+#[builder(setter(strip_option, into))]
+pub struct ChatCompletionMessagesRequest {
+    #[serde(skip_serializing)]
+    pub completion_id: String,
+
+    #[builder(default)]
+    #[serde(skip_serializing)]
+    pub credentials: Option<Credentials>,
+
+    #[builder(default)]
+    #[serde(flatten)]
+    pub pagination: RequestPagination
+}
+
+/// A list of messages for a chat completion.
+#[derive(Deserialize, Clone, Debug, Eq, PartialEq)]
+pub struct ChatCompletionMessages {
+    pub data: Vec<ChatCompletionMessage>,
+    pub object: String,
+    pub first_id: Option<String>,
+    pub last_id: Option<String>,
+    pub has_more: bool,
+}
+
 impl ChatCompletion {
     pub async fn create(request: ChatCompletionRequest) -> ApiResponseOrError<Self> {
         let credentials_opt = request.credentials.clone();
         openai_post("chat/completions", &request, credentials_opt).await
+    }
+
+    /// Get a stored completion.
+    pub async fn get(id: &str, credentials: Credentials) -> ApiResponseOrError<Self> {
+        let route = format!("chat/completions/{}", id);
+        openai_get(route.as_str(), Some(credentials)).await
     }
 }
 
@@ -470,6 +508,23 @@ impl From<ChatCompletionFunctionCallDelta> for ChatCompletionFunctionCall {
     }
 }
 
+impl ChatCompletionMessages {
+    /// Create a builder for fetching messages for a stored completion.
+    pub fn builder(completion_id: String) -> ChatCompletionMessagesRequestBuilder {
+        ChatCompletionMessagesRequestBuilder::create_empty()
+            .completion_id(completion_id.to_string())
+    }
+
+    /// Fetch messages for a stored completion.
+    pub async fn fetch(request: ChatCompletionMessagesRequest) -> ApiResponseOrError<ChatCompletionMessages> {
+        let route = format!("chat/completions/{}/messages", request.completion_id);
+        let credentials = request.credentials.clone();
+        openai_get_with_query(route.as_str(), &request, credentials).await
+    }
+}
+
+
+
 #[derive(Debug)]
 pub enum ChatCompletionDeltaMergeError {
     DifferentCompletionIds,
@@ -525,6 +580,13 @@ impl ChatCompletionBuilder {
     }
 }
 
+impl ChatCompletionMessagesRequestBuilder {
+    /// Fetch messages for the specified completion.
+    pub async fn fetch(self) -> ApiResponseOrError<ChatCompletionMessages> {
+        ChatCompletionMessages::fetch(self.build().unwrap()).await
+    }
+}
+
 fn clone_default_unwrapped_option_string(string: &Option<String>) -> String {
     match string {
         Some(value) => value.clone(),
@@ -542,6 +604,8 @@ impl Default for ChatCompletionMessageRole {
 mod tests {
     use super::*;
     use dotenvy::dotenv;
+    use tokio::time::sleep;
+    use std::time::Duration;
 
     #[tokio::test]
     async fn chat() {
@@ -871,5 +935,131 @@ mod tests {
                 .unwrap(),
             "25903.06"
         );
+    }
+
+    #[tokio::test]
+    async fn get_completion() {
+        dotenv().ok();
+        let credentials = Credentials::from_env();
+
+        let chat_completion = ChatCompletion::builder(
+            "gpt-3.5-turbo",
+            [ChatCompletionMessage {
+                role: ChatCompletionMessageRole::User,
+                content: Some("Hello!".to_string()),
+                ..Default::default()
+            }],
+        )
+        .credentials(credentials.clone())
+        .store(true)
+        .create()
+        .await
+        .unwrap();
+
+        // Unfortunatelly completions are not available immediately so we need to wait a bit
+        sleep(Duration::from_secs(7)).await;
+
+        let retrieved_completion = ChatCompletion::get(&chat_completion.id, credentials.clone()).await.unwrap();
+
+        assert_eq!(retrieved_completion, chat_completion);
+    }
+ 
+ 
+    #[tokio::test]
+    async fn get_completion_non_existent() {
+        dotenv().ok();
+        let credentials = Credentials::from_env();
+
+        match ChatCompletion::get("non_existent_id", credentials.clone()).await {
+            Ok(_) => panic!("Expected error"),
+            Err(e) => assert_eq!(e.code, Some("not_found".to_string())),
+        }
+    }
+
+    #[tokio::test]
+    async fn get_completion_messages() {
+        dotenv().ok();
+        let credentials = Credentials::from_env();
+
+        let user_message = ChatCompletionMessage {
+            role: ChatCompletionMessageRole::User,
+            content: Some("Tell me a short joke".to_string()),
+            ..Default::default()
+        };
+
+        let chat_completion = ChatCompletion::builder(
+            "gpt-3.5-turbo",
+            [user_message.clone()],
+        )
+        .credentials(credentials.clone())
+        .store(true)
+        .create()
+        .await
+        .unwrap();
+
+        // Unfortunatelly completions are not available immediately so we need to wait a bit
+        sleep(Duration::from_secs(7)).await;
+
+        let retrieved_messages = ChatCompletionMessages::builder(chat_completion.id)
+            .credentials(credentials.clone())
+            .fetch()
+            .await
+            .unwrap();
+
+        assert_eq!(retrieved_messages.data, vec![user_message]);
+        assert_eq!(retrieved_messages.has_more, false);
+    }
+
+    #[tokio::test]
+    async fn get_completion_messages_with_pagination() {
+        dotenv().ok();
+        let credentials = Credentials::from_env();
+
+        let user_message = ChatCompletionMessage {
+            role: ChatCompletionMessageRole::User,
+            content: Some("Tell me a short joke".to_string()),
+            ..Default::default()
+        };
+
+        let chat_completion = ChatCompletion::builder(
+            "gpt-3.5-turbo",
+            [user_message.clone()],
+        )
+        .credentials(credentials.clone())
+        .store(true)
+        .create()
+        .await
+        .unwrap();
+    
+        dbg!(&chat_completion);
+
+        // Unfortunatelly completions are not available immediately so we need to wait a bit
+        sleep(Duration::from_secs(7)).await;
+
+        // Fetch the first page
+        let retrieved_messages1 = ChatCompletionMessages::builder(chat_completion.id.clone())
+            .credentials(credentials.clone())
+            .pagination(RequestPagination { limit: Some(1), ..Default::default() })
+            .fetch()
+            .await
+            .unwrap();
+
+        assert_eq!(retrieved_messages1.data, vec![user_message]);
+        assert_eq!(retrieved_messages1.has_more, false);
+        assert!(retrieved_messages1.first_id.is_some());
+        assert!(retrieved_messages1.last_id.is_some());
+
+        // Fetch the second page, which should be empty
+        let retrieved_messages2 = ChatCompletionMessages::builder(chat_completion.id.clone())
+            .credentials(credentials.clone())
+            .pagination(RequestPagination { limit: Some(1), after: Some(retrieved_messages1.first_id.unwrap()), ..Default::default() })
+            .fetch()
+            .await
+            .unwrap();
+
+        assert_eq!(retrieved_messages2.data, vec![]);
+        assert_eq!(retrieved_messages2.has_more, false);
+        assert!(retrieved_messages2.first_id.is_none());
+        assert!(retrieved_messages2.last_id.is_none());
     }
 }
