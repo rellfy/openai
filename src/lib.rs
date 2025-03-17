@@ -86,7 +86,7 @@ pub struct RequestPagination {
     pub after: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub order: Option<RequestOrder>
+    pub order: Option<RequestOrder>,
 }
 
 /// Order of items in a list.
@@ -216,12 +216,22 @@ where
     openai_request_json(Method::GET, route, |request| request, credentials_opt).await
 }
 
-async fn openai_get_with_query<T, Query>(route: &str, query: &Query, credentials_opt: Option<Credentials>) -> ApiResponseOrError<T>
+async fn openai_get_with_query<T, Query>(
+    route: &str,
+    query: &Query,
+    credentials_opt: Option<Credentials>,
+) -> ApiResponseOrError<T>
 where
     T: DeserializeOwned,
-    Query: Serialize + ?Sized
+    Query: Serialize + ?Sized,
 {
-    openai_request_json(Method::GET, route, |request| request.query(query), credentials_opt).await
+    openai_request_json(
+        Method::GET,
+        route,
+        |request| request.query(query),
+        credentials_opt,
+    )
+    .await
 }
 
 async fn openai_delete<T>(

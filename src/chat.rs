@@ -1,6 +1,9 @@
 //! Given a chat conversation, the model will return a chat completion response.
 
-use super::{openai_post, openai_get, openai_get_with_query, ApiResponseOrError, Credentials, Usage, RequestPagination};
+use super::{
+    openai_get, openai_get_with_query, openai_post, ApiResponseOrError, Credentials,
+    RequestPagination, Usage,
+};
 use crate::openai_request_stream;
 use derive_builder::Builder;
 use futures_util::StreamExt;
@@ -328,7 +331,7 @@ pub struct ChatCompletionMessagesRequest {
 
     #[builder(default)]
     #[serde(flatten)]
-    pub pagination: RequestPagination
+    pub pagination: RequestPagination,
 }
 
 /// A list of messages for a chat completion.
@@ -516,14 +519,14 @@ impl ChatCompletionMessages {
     }
 
     /// Fetch messages for a stored completion.
-    pub async fn fetch(request: ChatCompletionMessagesRequest) -> ApiResponseOrError<ChatCompletionMessages> {
+    pub async fn fetch(
+        request: ChatCompletionMessagesRequest,
+    ) -> ApiResponseOrError<ChatCompletionMessages> {
         let route = format!("chat/completions/{}/messages", request.completion_id);
         let credentials = request.credentials.clone();
         openai_get_with_query(route.as_str(), &request, credentials).await
     }
 }
-
-
 
 #[derive(Debug)]
 pub enum ChatCompletionDeltaMergeError {
@@ -604,8 +607,8 @@ impl Default for ChatCompletionMessageRole {
 mod tests {
     use super::*;
     use dotenvy::dotenv;
-    use tokio::time::sleep;
     use std::time::Duration;
+    use tokio::time::sleep;
 
     #[tokio::test]
     async fn chat() {
@@ -959,12 +962,13 @@ mod tests {
         // Unfortunatelly completions are not available immediately so we need to wait a bit
         sleep(Duration::from_secs(7)).await;
 
-        let retrieved_completion = ChatCompletion::get(&chat_completion.id, credentials.clone()).await.unwrap();
+        let retrieved_completion = ChatCompletion::get(&chat_completion.id, credentials.clone())
+            .await
+            .unwrap();
 
         assert_eq!(retrieved_completion, chat_completion);
     }
- 
- 
+
     #[tokio::test]
     async fn get_completion_non_existent() {
         dotenv().ok();
@@ -987,15 +991,12 @@ mod tests {
             ..Default::default()
         };
 
-        let chat_completion = ChatCompletion::builder(
-            "gpt-3.5-turbo",
-            [user_message.clone()],
-        )
-        .credentials(credentials.clone())
-        .store(true)
-        .create()
-        .await
-        .unwrap();
+        let chat_completion = ChatCompletion::builder("gpt-3.5-turbo", [user_message.clone()])
+            .credentials(credentials.clone())
+            .store(true)
+            .create()
+            .await
+            .unwrap();
 
         // Unfortunatelly completions are not available immediately so we need to wait a bit
         sleep(Duration::from_secs(7)).await;
@@ -1021,16 +1022,13 @@ mod tests {
             ..Default::default()
         };
 
-        let chat_completion = ChatCompletion::builder(
-            "gpt-3.5-turbo",
-            [user_message.clone()],
-        )
-        .credentials(credentials.clone())
-        .store(true)
-        .create()
-        .await
-        .unwrap();
-    
+        let chat_completion = ChatCompletion::builder("gpt-3.5-turbo", [user_message.clone()])
+            .credentials(credentials.clone())
+            .store(true)
+            .create()
+            .await
+            .unwrap();
+
         dbg!(&chat_completion);
 
         // Unfortunatelly completions are not available immediately so we need to wait a bit
@@ -1039,7 +1037,10 @@ mod tests {
         // Fetch the first page
         let retrieved_messages1 = ChatCompletionMessages::builder(chat_completion.id.clone())
             .credentials(credentials.clone())
-            .pagination(RequestPagination { limit: Some(1), ..Default::default() })
+            .pagination(RequestPagination {
+                limit: Some(1),
+                ..Default::default()
+            })
             .fetch()
             .await
             .unwrap();
@@ -1052,7 +1053,11 @@ mod tests {
         // Fetch the second page, which should be empty
         let retrieved_messages2 = ChatCompletionMessages::builder(chat_completion.id.clone())
             .credentials(credentials.clone())
-            .pagination(RequestPagination { limit: Some(1), after: Some(retrieved_messages1.first_id.unwrap()), ..Default::default() })
+            .pagination(RequestPagination {
+                limit: Some(1),
+                after: Some(retrieved_messages1.first_id.unwrap()),
+                ..Default::default()
+            })
             .fetch()
             .await
             .unwrap();
