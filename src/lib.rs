@@ -6,6 +6,7 @@ use std::env;
 use std::env::VarError;
 use std::sync::{LazyLock, RwLock};
 
+pub mod audio;
 pub mod chat;
 pub mod completions;
 pub mod edits;
