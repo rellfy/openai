@@ -5,10 +5,7 @@ use openai::{
     Credentials,
 };
 use std::io::{stdin, stdout, Write};
-use tokio::sync::mpsc::{
-    Receiver,
-    error::TryRecvError,
-};
+use tokio::sync::mpsc::{error::TryRecvError, Receiver};
 
 #[tokio::main]
 async fn main() {
@@ -68,19 +65,18 @@ async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) -> Ch
                 match merged.as_mut() {
                     Some(c) => {
                         c.merge(delta).unwrap();
-                    },
+                    }
                     None => merged = Some(delta),
                 };
-            },
+            }
             Err(TryRecvError::Empty) => {
                 let d = std::time::Duration::from_millis(100);
                 std::thread::sleep(d);
-            },
+            }
             Err(TryRecvError::Disconnected) => {
                 d = false;
-            },
+            }
         };
-
     }
     merged.unwrap().into()
 }
