@@ -50,7 +50,7 @@ async fn main() {
 
 async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) -> ChatCompletion {
     let mut merged: Option<ChatCompletionDelta> = None;
-    
+
     let mut d = true;
     while d {
         match chat_stream.try_recv() {
@@ -68,7 +68,7 @@ async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) -> Ch
                 match merged.as_mut() {
                     Some(c) => {
                         c.merge(delta).unwrap();
-                    }
+                    },
                     None => merged = Some(delta),
                 };
             },
