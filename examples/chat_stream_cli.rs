@@ -5,7 +5,10 @@ use openai::{
     Credentials,
 };
 use std::io::{stdin, stdout, Write};
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{
+    Receiver,
+    error::TryRecvError,
+};
 
 #[tokio::main]
 async fn main() {
@@ -47,26 +50,37 @@ async fn main() {
 
 async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) -> ChatCompletion {
     let mut merged: Option<ChatCompletionDelta> = None;
-    while let Some(delta) = chat_stream.recv().await {
-        let choice = &delta.choices[0];
-        if let Some(role) = &choice.delta.role {
-            print!("{:#?}: ", role);
-        }
-        if let Some(content) = &choice.delta.content {
-            print!("{}", content);
-        }
-        if let Some(_) = &choice.finish_reason {
-            // The message being streamed has been fully received.
-            print!("\n");
-        }
-        stdout().flush().unwrap();
-        // Merge completion into accrued.
-        match merged.as_mut() {
-            Some(c) => {
-                c.merge(delta).unwrap();
-            }
-            None => merged = Some(delta),
+    
+    let mut d = true;
+    while d {
+        match chat_stream.try_recv() {
+            Ok(delta) => {
+                let choice = &delta.choices[0];
+                if let Some(role) = &choice.delta.role {
+                    print!("{:#?}: ", role);
+                }
+                if let Some(content) = &choice.delta.content {
+                    print!("{}", content);
+                }
+                stdout().flush().unwrap();
+
+                // Merge completion into accrued.
+                match merged.as_mut() {
+                    Some(c) => {
+                        c.merge(delta).unwrap();
+                    }
+                    None => merged = Some(delta),
+                };
+            },
+            Err(TryRecvError::Empty) => {
+                let d = std::time::Duration::from_millis(100);
+                std::thread::sleep(d);
+            },
+            Err(TryRecvError::Disconnected) => {
+                d = false;
+            },
         };
+
     }
     merged.unwrap().into()
 }
