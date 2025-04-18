@@ -47,9 +47,7 @@ async fn main() {
 
 async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) -> ChatCompletion {
     let mut merged: Option<ChatCompletionDelta> = None;
-
-    let mut d = true;
-    while d {
+    loop {
         match chat_stream.try_recv() {
             Ok(delta) => {
                 let choice = &delta.choices[0];
@@ -60,8 +58,7 @@ async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) -> Ch
                     print!("{}", content);
                 }
                 stdout().flush().unwrap();
-
-                // Merge completion into accrued.
+                // Merge token into full completion.
                 match merged.as_mut() {
                     Some(c) => {
                         c.merge(delta).unwrap();
@@ -70,11 +67,11 @@ async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) -> Ch
                 };
             }
             Err(TryRecvError::Empty) => {
-                let d = std::time::Duration::from_millis(100);
-                std::thread::sleep(d);
+                let duration = std::time::Duration::from_millis(50);
+                tokio::time::sleep(duration).await;
             }
             Err(TryRecvError::Disconnected) => {
-                d = false;
+                break;
             }
         };
     }
