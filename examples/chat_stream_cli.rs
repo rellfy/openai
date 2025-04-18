@@ -75,5 +75,6 @@ async fn listen_for_tokens(mut chat_stream: Receiver<ChatCompletionDelta>) -> Ch
             }
         };
     }
+    println!();
     merged.unwrap().into()
 }
