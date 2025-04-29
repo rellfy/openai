@@ -22,6 +22,7 @@ pub type ChatCompletionDelta = ChatCompletionGeneric<ChatCompletionChoiceDelta>;
 
 #[derive(Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct ChatCompletionGeneric<C> {
+    #[serde(default)]
     pub id: String,
     pub object: String,
     pub created: u64,
@@ -1066,5 +1067,42 @@ mod tests {
         assert_eq!(retrieved_messages2.has_more, false);
         assert!(retrieved_messages2.first_id.is_none());
         assert!(retrieved_messages2.last_id.is_none());
+    }
+
+    #[tokio::test]
+    async fn chat_google() {
+        dotenv().ok();
+        let credentials = Credentials::from_env();
+
+        let chat_completion = ChatCompletion::builder(
+            "gemini-2.0-flash",
+            [ChatCompletionMessage {
+                role: ChatCompletionMessageRole::User,
+                content: Some("Hello!".to_string()),
+                name: None,
+                function_call: None,
+                tool_call_id: None,
+                tool_calls: Some(Vec::new()),
+            }],
+        )
+        .temperature(0.0)
+        .response_format(ChatCompletionResponseFormat::text())
+        .credentials(credentials)
+        .create()
+        .await
+        .unwrap();
+
+        assert_eq!(
+            chat_completion
+                .choices
+                .first()
+                .unwrap()
+                .message
+                .content
+                .as_ref()
+                .unwrap()
+                .trim(),
+            "Hello! How can I help you today?"
+        );
     }
 }
