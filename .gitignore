@@ -18,3 +18,4 @@ Cargo.lock
 # Jetbrains
 .idea
 *.iml
+/.vscode

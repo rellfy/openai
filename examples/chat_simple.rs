@@ -1,6 +1,6 @@
 use dotenvy::dotenv;
 use openai::{
-    chat::{ChatCompletion, ChatCompletionMessage, ChatCompletionMessageRole},
+    chat::{ChatCompletion, ChatCompletionMessage, ChatCompletionMessageRole, Content},
     Credentials,
 };
 
@@ -13,12 +13,12 @@ async fn main() {
     let messages = vec![
         ChatCompletionMessage {
             role: ChatCompletionMessageRole::System,
-            content: Some("You are a helpful assistant.".to_string()),
+            content: Some(Content::new_str("You are a helpful assistant.")),
             ..Default::default()
         },
         ChatCompletionMessage {
             role: ChatCompletionMessageRole::User,
-            content: Some("Tell me a random crab fact".to_string()),
+            content: Some(Content::new_str("Tell me a random crab fact")),
             ..Default::default()
         },
     ];
@@ -32,6 +32,6 @@ async fn main() {
     println!(
         "{:#?}: {}",
         returned_message.role,
-        returned_message.content.unwrap().trim()
+        returned_message.content.unwrap()
     );
 }
