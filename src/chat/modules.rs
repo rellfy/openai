@@ -52,6 +52,7 @@ pub struct ChatCompletionMessage {
     ///
     /// This is always required for all messages, except for when ChatGPT calls
     /// a function.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<Content>,
     /// The name of the user in a multi-user chat
     #[serde(skip_serializing_if = "Option::is_none")]
