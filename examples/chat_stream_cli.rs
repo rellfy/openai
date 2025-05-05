@@ -1,5 +1,5 @@
 use dotenvy::dotenv;
-use openai::chat::{ChatCompletion, ChatCompletionDelta};
+use openai::chat::{ChatCompletion, ChatCompletionDelta, Content};
 use openai::{
     chat::{ChatCompletionMessage, ChatCompletionMessageRole},
     Credentials,
@@ -15,7 +15,9 @@ async fn main() {
 
     let mut messages = vec![ChatCompletionMessage {
         role: ChatCompletionMessageRole::System,
-        content: Some("You're an AI that replies to each message verbosely.".to_string()),
+        content: Some(Content::new_str(
+            "You're an AI that replies to each message verbosely.",
+        )),
         ..Default::default()
     }];
 
@@ -28,7 +30,7 @@ async fn main() {
         stdin().read_line(&mut user_message_content).unwrap();
         messages.push(ChatCompletionMessage {
             role: ChatCompletionMessageRole::User,
-            content: Some(user_message_content),
+            content: Some(Content::new_str(&user_message_content)),
             ..Default::default()
         });
 
