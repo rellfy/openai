@@ -20,7 +20,10 @@ pub async fn forward_deserialized_chat_response_stream(
                             }
                         }
                         Err(e) => {
-                            warn!("Failed to deserialize completion delta: {}", e);
+                            warn!(
+                                "Failed to deserialize ChatCompletionDelta from JSON data '{}': {}",
+                                &event.data, e
+                            );
                         }
                     }
                 }
