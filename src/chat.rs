@@ -83,6 +83,8 @@ pub struct ChatCompletionMessageDelta {
     pub role: Option<ChatCompletionMessageRole>,
     /// The contents of the message
     pub content: Option<String>,
+    /// The reasoning contents of the message
+    pub reasoning_content: Option<String>,
     /// The name of the user in a multi-user chat
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
