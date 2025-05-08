@@ -136,27 +136,10 @@ pub struct FunctionChoice {
     pub name: String,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct FunctionLiteral;
-impl Serialize for FunctionLiteral {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str("function")
-    }
-}
-impl<'de> Deserialize<'de> for FunctionLiteral {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s: &str = serde::Deserialize::deserialize(deserializer)?;
-        if s != "function" {
-            return Err(serde::de::Error::custom("expected function"));
-        }
-        Ok(FunctionLiteral)
-    }
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum FunctionType {
+    Function,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
@@ -169,7 +152,7 @@ pub enum ToolChoice {
     /// The model will call the function with the given name.
     Function {
         /// The type of the tool. Currently, only `function` is supported.
-        r#type: FunctionLiteral,
+        r#type: FunctionType,
         /// The function that the model called.
         function: FunctionChoice,
     },
@@ -181,7 +164,7 @@ impl ToolChoice {
     }
     pub fn function(name: String) -> Self {
         ToolChoice::Function {
-            r#type: FunctionLiteral,
+            r#type: FunctionType::Function,
             function: FunctionChoice { name },
         }
     }
@@ -192,7 +175,7 @@ pub struct ToolCall {
     /// The ID of the tool call.
     pub id: String,
     /// The type of the tool. Currently, only `function` is supported.
-    pub r#type: FunctionLiteral,
+    pub r#type: FunctionType,
     /// The function that the model called.
     pub function: ToolCallFunction,
 }
@@ -203,7 +186,7 @@ pub struct ToolCallDelta {
     /// The ID of the tool call.
     pub id: String,
     /// The type of the tool. Currently, only `function` is supported.
-    pub r#type: FunctionLiteral,
+    pub r#type: FunctionType,
     /// The function that the model called.
     pub function: ToolCallFunction,
 }
@@ -1011,7 +994,7 @@ mod tests {
         .credentials(credentials)
         .tools(vec![schema])
         .tool_choice(ToolChoice::Function {
-            r#type: FunctionLiteral,
+            r#type: FunctionType::Function,
             function: FunctionChoice {
                 name: "Character".to_string(),
             },
@@ -1056,7 +1039,7 @@ mod tests {
                     tool_call_id: None,
                     tool_calls: Some(vec![ToolCall {
                         id: "the_tool_call".to_string(),
-                        r#type: FunctionLiteral,
+                        r#type: FunctionType::Function,
                         function: ToolCallFunction {
                             name: "mul".to_string(),
                             arguments: "not_required_to_be_valid_here".to_string(),
