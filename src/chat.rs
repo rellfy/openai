@@ -65,8 +65,7 @@ pub struct ChatCompletionMessage {
     /// The function that ChatGPT called. This should be "None" usually, and is returned by ChatGPT and not provided by the developer
     ///
     /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
-    ///
-    /// Deprecated, use `tool_calls` instead
+    #[deprecated(note = "Use `tool_calls` instead")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub function_call: Option<ChatCompletionFunctionCall>,
     /// Tool call that this message is responding to.
@@ -93,8 +92,7 @@ pub struct ChatCompletionMessageDelta {
     /// The function that ChatGPT called
     ///
     /// [API Reference](https://platform.openai.com/docs/api-reference/chat/create#chat/create-function_call)
-    ///
-    /// Deprecated, use `tool_calls` instead
+    #[deprecated(note = "Use `tool_calls` instead")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub function_call: Option<ChatCompletionFunctionCallDelta>,
     /// Tool call that this message is responding to.
