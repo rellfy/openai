@@ -182,11 +182,11 @@ pub struct ToolCall {
 pub struct ToolCallDelta {
     pub index: i64,
     /// The ID of the tool call.
-    pub id: String,
+    pub id: Option<String>,
     /// The type of the tool. Currently, only `function` is supported.
-    pub r#type: FunctionType,
+    pub r#type: Option<FunctionType>,
     /// The function that the model called.
-    pub function: ToolCallFunction,
+    pub function: Option<ToolCallFunction>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
@@ -516,6 +516,7 @@ impl ChatCompletionChoiceDelta {
         // merge function calls
         // function call names are concatenated
         // arguments are merged by concatenating them
+        #[allow(deprecated)]
         match self.delta.function_call.as_mut() {
             Some(function_call) => {
                 match &other.delta.function_call {
@@ -550,6 +551,7 @@ impl ChatCompletionChoiceDelta {
 
 impl From<ChatCompletionDelta> for ChatCompletion {
     fn from(delta: ChatCompletionDelta) -> Self {
+        #[allow(deprecated)]
         ChatCompletion {
             id: delta.id,
             object: delta.object,
@@ -657,6 +659,7 @@ impl Default for ChatCompletionMessageRole {
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::*;
     use dotenvy::dotenv;
