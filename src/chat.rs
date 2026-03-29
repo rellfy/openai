@@ -88,6 +88,8 @@ pub struct ChatCompletionMessageDelta {
     pub role: Option<ChatCompletionMessageRole>,
     /// The contents of the message
     pub content: Option<String>,
+    /// The contents of the reasoning message
+    pub reasoning_content:Option<String>,
     /// The name of the user in a multi-user chat
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -435,6 +437,27 @@ impl ChatCompletionChoiceDelta {
                     Some(other_content) => {
                         // Set this content to other content.
                         self.delta.content = Some(other_content.clone());
+                    }
+                    None => {}
+                }
+            }
+        };
+        // Merge reasonging contents.
+        match self.delta.reasoning_content.as_mut() {
+            Some(content) => {
+                match &other.delta.reasoning_content {
+                    Some(other_content) => {
+                        // Push other content into this one.
+                        content.push_str(other_content)
+                    }
+                    None => {}
+                }
+            }
+            None => {
+                match &other.delta.reasoning_content {
+                    Some(other_content) => {
+                        // Set this content to other content.
+                        self.delta.reasoning_content = Some(other_content.clone());
                     }
                     None => {}
                 }

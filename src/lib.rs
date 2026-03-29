@@ -1,3 +1,4 @@
+use reqwest::header::USER_AGENT;
 use reqwest::multipart::Form;
 use reqwest::{header::AUTHORIZATION, Client, Method, RequestBuilder, Response};
 use reqwest_eventsource::{CannotCloneRequestError, EventSource, RequestBuilderExt};
@@ -205,6 +206,7 @@ where
     request = builder(request);
     let stream = request
         .header(AUTHORIZATION, format!("Bearer {}", credentials.api_key))
+        .header(USER_AGENT, format!("claude-code/1.0"))
         .eventsource()?;
     Ok(stream)
 }
