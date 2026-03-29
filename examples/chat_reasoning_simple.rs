@@ -1,11 +1,11 @@
-use std::io::{Write, stdout};
+use std::io::{stdout, Write};
 
 use dotenvy::dotenv;
 use openai::{
-    Credentials,
     chat::{ChatCompletion, ChatCompletionDelta, ChatCompletionMessage, ChatCompletionMessageRole},
+    Credentials,
 };
-use tokio::sync::mpsc::{Receiver, error::TryRecvError};
+use tokio::sync::mpsc::{error::TryRecvError, Receiver};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
@@ -19,7 +19,7 @@ async fn main() {
 
     stdout().flush().unwrap();
 
-    let  user_message_content = "what tools do you have?".to_string();
+    let user_message_content = "what tools do you have?".to_string();
 
     messages.push(ChatCompletionMessage {
         role: ChatCompletionMessageRole::User,

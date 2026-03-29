@@ -89,7 +89,8 @@ pub struct ChatCompletionMessageDelta {
     /// The contents of the message
     pub content: Option<String>,
     /// The contents of the reasoning message
-    pub reasoning_content:Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reasoning_content: Option<String>,
     /// The name of the user in a multi-user chat
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
