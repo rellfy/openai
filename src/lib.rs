@@ -185,6 +185,7 @@ where
     request = builder(request);
     let response = request
         .header(AUTHORIZATION, format!("Bearer {}", credentials.api_key))
+        .header(USER_AGENT, format!("openai"))
         .send()
         .await?;
     Ok(response)
@@ -206,7 +207,7 @@ where
     request = builder(request);
     let stream = request
         .header(AUTHORIZATION, format!("Bearer {}", credentials.api_key))
-        .header(USER_AGENT, format!("claude-code/1.0"))
+        .header(USER_AGENT, format!("openai"))
         .eventsource()?;
     Ok(stream)
 }
