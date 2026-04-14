@@ -27,12 +27,16 @@ let messages = vec![
         content: Some("You are a helpful assistant.".to_string()),
         name: None,
         function_call: None,
+        tool_call_id: None,
+        tool_calls: None
     },
     ChatCompletionMessage {
         role: ChatCompletionMessageRole::User,
         content: Some("Tell me a random crab fact".to_string()),
         name: None,
         function_call: None,
+        tool_call_id: None,
+        tool_calls: None
     },
 ];
 let chat_completion = ChatCompletion::builder("gpt-4o", messages.clone())
