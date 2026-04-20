@@ -18,6 +18,7 @@ tokio = { version = "1.26.0", features = ["full"] }
 anyhow = "1.0.70"
 futures-util = "0.3.28"
 bytes = "1.4.0"
+schemars = "0.8.22"
 
 [dev-dependencies]
 dotenvy = "0.15.7"
