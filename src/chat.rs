@@ -179,6 +179,13 @@ pub enum ChatCompletionMessageRole {
 #[builder(name = "ChatCompletionBuilder")]
 #[builder(setter(strip_option, into))]
 pub struct ChatCompletionRequest {
+    /// Additional JSON properties to merge into the request body.
+    ///
+    /// If a key overlaps with a typed field, the typed field value wins.
+    #[builder(default)]
+    #[serde(flatten)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    extra_body: Option<HashMap<String, Value>>,
     /// ID of the model to use. Currently, only `gpt-3.5-turbo`, `gpt-3.5-turbo-0301` and `gpt-4`
     /// are supported.
     model: String,
@@ -220,6 +227,10 @@ pub struct ChatCompletionRequest {
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     max_completion_tokens: Option<u64>,
+    /// Constrains effort on reasoning for reasoning-capable models.
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reasoning_effort: Option<String>,
     /// Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.
     ///
     /// [See more information about frequency and presence penalties.](https://platform.openai.com/docs/api-reference/parameter-details)
